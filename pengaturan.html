@@ -125,6 +125,16 @@
             </a>
           </nav>
 
+          <p class="settings-section-title">Notifikasi</p>
+          <section class="panel-block" style="margin-bottom:14px;">
+            <div>
+              <p style="margin:0;font-size:13.5px;font-weight:600;color:var(--color-navy);">Notifikasi ke HP</p>
+              <p style="margin:3px 0 10px;font-size:12.5px;color:var(--color-text-muted);">Dapat pemberitahuan langsung ke HP (belum absen, penugasan baru, dll) walau aplikasi sedang tertutup.</p>
+              <p id="statusNotifHp" style="font-size:12.5px;color:var(--color-text-muted);margin:0 0 10px;">Memeriksa status...</p>
+              <button type="button" class="btn-outline" id="btnAktifkanNotifHp" style="width:100%;">🔔 Aktifkan Notifikasi HP</button>
+            </div>
+          </section>
+
           <p class="settings-section-title">Tampilan</p>
           <section class="panel-block" style="margin-bottom:14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
@@ -166,6 +176,10 @@
 <script src="common.js?v=20260903c"></script>
 <script src="auth-relawan.js?v=20260903c"></script>
 <script src="app-shell.js?v=20260903c"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="push-notif.js"></script>
 <script src="pengaturan.js?v=20260903c"></script>
 </body>
 </html>

@@ -109,3 +109,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// ---- Notifikasi HP (Firebase Cloud Messaging) ----
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btnAktifkanNotifHp');
+  const status = document.getElementById('statusNotifHp');
+  if (!btn) return;
+
+  function perbaruiTampilanStatus_() {
+    if (!('Notification' in window)) {
+      status.textContent = 'Browser ini tidak mendukung notifikasi.';
+      btn.disabled = true;
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      status.textContent = '✅ Notifikasi HP aktif.';
+      btn.textContent = '🔕 Matikan Notifikasi HP';
+    } else if (Notification.permission === 'denied') {
+      status.textContent = '⚠️ Izin notifikasi diblokir. Aktifkan lewat pengaturan browser/HP kamu.';
+      btn.textContent = '🔔 Aktifkan Notifikasi HP';
+    } else {
+      status.textContent = 'Notifikasi HP belum diaktifkan.';
+      btn.textContent = '🔔 Aktifkan Notifikasi HP';
+    }
+  }
+  perbaruiTampilanStatus_();
+
+  btn.addEventListener('click', async () => {
+    const sesi = ambilSesiRelawan();
+    if (!sesi || !sesi.token) return;
+    try {
+      showLoading('Memproses...');
+      if (Notification.permission === 'granted') {
+        await nonaktifkanNotifikasiHp(sesi.token);
+      } else {
+        await aktifkanNotifikasiHp(sesi.token);
+      }
+      hideLoading();
+      showSuccess('Berhasil diperbarui.');
+      perbaruiTampilanStatus_();
+    } catch (err) {
+      hideLoading();
+      showError(err.message);
+    }
+  });
+});
