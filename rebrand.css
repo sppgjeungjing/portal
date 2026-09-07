@@ -267,3 +267,27 @@
   border-left-color: var(--sppg-line); border-style: dashed;
   text-align: center; padding: 30px 18px; color: #6b7280;
 }
+
+/* ================================================================
+   v2.3 — FIX FINAL: "PORTAL" & "SPPG JEUNGJING" ukuran sama persis,
+   dan BENAR-BENAR di tengah HALAMAN (bukan cuma tengah ruang sisa
+   antara burger & avatar, yang lebarnya beda sehingga sebelumnya
+   sedikit bergeser). Ditulis di akhir file supaya menang di cascade
+   atas 3 aturan lama yang saling tumpang tindih (v1/v2.1/v2.2 di atas).
+   ================================================================ */
+.shell-topbar { position: relative; }
+.shell-topbar-brand--portal {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  flex: none; width: max-content;
+}
+.shell-topbar-brand--portal .shell-topbar-brand-text {
+  display: flex !important; flex-direction: column !important;
+  align-items: center; line-height: 1.15;
+}
+.shell-topbar-brand--portal .shell-topbar-brand-label,
+.shell-topbar-brand--portal strong {
+  display: block !important; margin: 0 !important;
+  font-size: 13.5px; font-weight: 800; letter-spacing: .08em;
+  color: #fff; text-transform: uppercase; text-align: center;
+}
