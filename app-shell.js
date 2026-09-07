@@ -195,4 +195,18 @@ function markAllNotifRead(idRelawan, ids) {
 // pasti terdaftar lebih dulu. Ini yang membuat window.sppgProfilPromise
 // (lihat bootRelawanShell) benar-benar bisa dipakai bersama, bukan cuma
 // tertulis di kode tapi tidak pernah kejadian tepat waktu.
-document.addEventListener('DOMContentLoaded', bootRelawanShell);
+// Dipicu di sini (bukan lewat <script> inline per halaman) supaya SELALU
+// berjalan LEBIH DULU daripada dashboard.js/profil.js dkk -- app-shell.js
+// dimuat lebih awal di <head>/<body>, jadi listener DOMContentLoaded-nya
+// pasti terdaftar lebih dulu.
+//
+// PERBAIKAN PENTING: admin.html JUGA memuat app-shell.js (untuk initShell
+// dkk), tapi admin TIDAK PERNAH punya sesi relawan -- kalau bootRelawanShell
+// dipicu di situ, dia akan selalu redirect ke login.html (relawan), bikin
+// halaman Admin jadi tidak bisa diakses sama sekali. Makanya di sini
+// SENGAJA dicek dulu: kalau <body> punya class "admin-body", jangan
+// otomatis boot sebagai relawan.
+document.addEventListener('DOMContentLoaded', function () {
+  if (document.body.classList.contains('admin-body')) return;
+  bootRelawanShell();
+});
