@@ -105,7 +105,6 @@
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelDokumen"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span><span>Dokumen</span></button>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelPengumuman"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg></span><span>Pengumuman</span></button>
       <p class="shell-nav-group-title">Lainnya</p>
-      <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelAuditLog"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6M9 16h6M9 8h6"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg></span><span>Audit Log</span></button>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelBantuan"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.9.4-1.5 1-1.5 2.2"/><path d="M12 17v.01"/></svg></span><span>Bantuan</span></button>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelPengaturan"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg></span><span>Pengaturan</span></button>
     </nav>
@@ -250,23 +249,6 @@
       <table>
         <thead><tr><th>Nama</th><th>Role</th></tr></thead>
         <tbody id="tbodyRoleAkses"><tr><td colspan="2"><div class="empty-state">Memuat data...</div></td></tr></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- AUDIT LOG (BARU, Fase 9) -->
-  <div class="admin-panel" id="panelAuditLog">
-    <div class="shell-page-head">
-      <div class="shell-page-head-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6M9 16h6M9 8h6"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg></div>
-      <div><h1 style="font-size:18px;margin:0;color:var(--color-navy);">Audit Log</h1><p style="font-size:13px;margin:2px 0 0;color:var(--color-text-muted);">Jejak aksi sensitif — login Admin, perubahan role, koreksi data, ganti kredensial.</p></div>
-    </div>
-    <div class="inline-form" style="margin-bottom:14px;">
-      <button type="button" class="btn-mini primary" id="btnMuatAuditLog">Muat / Segarkan</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Waktu</th><th>Aksi</th><th>Modul</th><th>Terkait</th><th>Oleh</th><th>Detail</th></tr></thead>
-        <tbody id="tbodyAuditLog"><tr><td colspan="6"><div class="empty-state">Klik "Muat / Segarkan" untuk melihat log.</div></td></tr></tbody>
       </table>
     </div>
   </div>
@@ -872,7 +854,9 @@
 <script src="admin-stok.js?v=20260903c"></script>
 <script src="admin-shift.js?v=20260903c"></script>
 <script src="admin-role.js?v=20260903c"></script>
-<script src="admin-audit.js"></script>
+<script src="admin-export.js"></script>
+<script src="admin-charts.js"></script>
+<script src="admin-import.js"></script>
 <script>document.addEventListener('DOMContentLoaded', function () { initShell({ storageKey: 'sppgSidebarCollapsedAdmin' }); });</script>
 </body>
 </html>

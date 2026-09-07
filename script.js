@@ -370,17 +370,29 @@ function perbaruiTombolKirim() {
 async function kirimAbsensi() {
   if (!fotoDataUrl || !lokasiSaya || !zonaValid) return;
   el.btnKirimAbsen.disabled = true;
+
+  const payloadAbsensi = {
+    token: sesiAbsensi.token,
+    jenis: jenisAktif,
+    latitude: lokasiSaya.latitude,
+    longitude: lokasiSaya.longitude,
+    akurasi: lokasiSaya.akurasi,
+    fotoBase64: fotoDataUrl,
+    keterangan: el.inputKeteranganAbsen.value.trim()
+  };
+
+  // MODE OFFLINE: kalau perangkat memang sedang tanpa koneksi, jangan
+  // buang waktu mencoba kirim (pasti gagal) -- langsung antrikan.
+  if (typeof offlineAbsensi !== 'undefined' && !offlineAbsensi.sedangOnline()) {
+    offlineAbsensi.tambahKeAntrian(payloadAbsensi);
+    showSuccess('Kamu sedang offline. Absensi disimpan di perangkat dan akan otomatis terkirim begitu koneksi kembali.');
+    perbaruiTombolKirim();
+    return;
+  }
+
   showLoading(jenisAktif === 'MASUK' ? 'Mengirim absensi masuk...' : 'Mengirim absensi pulang...');
   try {
-    const hasil = await apiPost('submitAbsensi', {
-      token: sesiAbsensi.token,
-      jenis: jenisAktif,
-      latitude: lokasiSaya.latitude,
-      longitude: lokasiSaya.longitude,
-      akurasi: lokasiSaya.akurasi,
-      fotoBase64: fotoDataUrl,
-      keterangan: el.inputKeteranganAbsen.value.trim()
-    }, 45000); // timeout lebih panjang: upload foto ke Drive perlu waktu lebih dari 20 detik standar
+    const hasil = await apiPost('submitAbsensi', payloadAbsensi, 45000); // timeout lebih panjang: upload foto ke Drive perlu waktu lebih dari 20 detik standar
 
     hideLoading();
     tampilkanOverlaySukses(hasil);
@@ -407,12 +419,28 @@ async function kirimAbsensi() {
           });
           return;
         }
-        showError('Absensi belum tersimpan. Koneksi terputus saat mengirim — silakan coba kirim lagi.');
+        if (typeof offlineAbsensi !== 'undefined') {
+          offlineAbsensi.tambahKeAntrian(payloadAbsensi);
+          showSuccess('Absensi belum tersimpan. Disimpan di perangkat, akan otomatis dicoba kirim ulang.');
+        } else {
+          showError('Absensi belum tersimpan. Koneksi terputus saat mengirim — silakan coba kirim lagi.');
+        }
         perbaruiTombolKirim();
         return;
       } catch (errCek) {
         hideLoading();
-        showError('Koneksi terputus dan status absensi belum bisa dipastikan. Muat ulang halaman untuk memeriksa sebelum mengirim ulang.');
+        // Tidak bisa dipastikan tersimpan atau tidak (cek status pun gagal
+        // karena jaringan) -- daripada minta relawan menebak-nebak, langsung
+        // antrikan saja. Kalau ternyata percobaan awal SUDAH berhasil,
+        // sinkronisasi nanti akan mendeteksi "sudah absen" dan otomatis
+        // menganggapnya sukses (lihat offline-absensi.js) -- tidak akan
+        // membuat data ganda.
+        if (typeof offlineAbsensi !== 'undefined') {
+          offlineAbsensi.tambahKeAntrian(payloadAbsensi);
+          showSuccess('Koneksi tidak stabil. Absensi disimpan di perangkat dan akan diperiksa ulang otomatis.');
+        } else {
+          showError('Koneksi terputus dan status absensi belum bisa dipastikan. Muat ulang halaman untuk memeriksa sebelum mengirim ulang.');
+        }
         perbaruiTombolKirim();
         return;
       }
