@@ -62,7 +62,7 @@
     try {
       const [periode, divisi, relawan, kalender] = await Promise.all([
         apiGet('getPeriodeListAdmin', { token: token() }),
-        apiGet('getDivisi', {}),
+        apiGetCached('getDivisi', {}, 600000),
         apiGet('getRelawan', { semua: 1 }),
         apiGet('getKalenderListAdmin', { token: token() })
       ]);

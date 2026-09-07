@@ -285,7 +285,7 @@
   // satu modul yang gagal (mis. Jadwal) tidak ikut mengosongkan modul lain
   // yang datanya sebenarnya berhasil diambil (Relawan, Akun, dst).
   const SUMBER_DASHBOARD = [
-    { key: 'divisiList', label: 'Divisi', fn: () => apiGet('getDivisi') },
+    { key: 'divisiList', label: 'Divisi', fn: () => apiGetCached('getDivisi', {}, 600000) },
     { key: 'relawanList', label: 'Relawan', fn: () => apiGet('getRelawan', { semua: '1' }) },
     { key: 'akunList', label: 'Akun Relawan', fn: () => apiGet('getAkunRelawanList', { token: authToken }) },
     { key: 'informasiList', label: 'Informasi', fn: () => apiGet('getInformasiListAdmin', { token: authToken }) },
@@ -700,7 +700,7 @@
     try {
       await apiPost('addDivisi', { token: authToken, nama: el.inputDivisiBaru.value.trim() });
       el.inputDivisiBaru.value = '';
-      cache.divisiList = await apiGet('getDivisi');
+      cache.divisiList = await apiGetCached('getDivisi', {}, 600000);
       fillDivisiSelects();
       renderDivisiTable();
     } catch (err) {
