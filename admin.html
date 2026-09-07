@@ -874,5 +874,40 @@
 <script src="admin-role.js?v=20260903c"></script>
 <script src="admin-audit.js"></script>
 <script>document.addEventListener('DOMContentLoaded', function () { initShell({ storageKey: 'sppgSidebarCollapsedAdmin' }); });</script>
+  <!-- ============================================================
+     TEMPEL BLOK INI DI admin.html — taruh di mana saja yang mudah
+     ditemukan, misalnya PERSIS SEBELUM tag </body> di paling bawah file.
+     Ini SENGAJA berdiri sendiri (bukan menimpa file admin.html kamu),
+     supaya tidak menghapus bagian lain yang sudah ada di admin.html
+     kamu yang mungkin beda dari yang saya punya.
+     ============================================================ -->
+
+<div style="position:fixed;bottom:16px;right:16px;z-index:9999;background:#fff;border:1px solid #d7dbe1;border-radius:12px;padding:14px;box-shadow:0 4px 16px rgba(0,0,0,.15);max-width:280px;font-family:inherit;">
+  <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#12294d;">🔔 Test Push Notifikasi</p>
+  <input type="text" id="testPushIdRelawan" placeholder="ID Relawan (mis. R001)" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid #d7dbe1;border-radius:8px;font-size:12.5px;margin-bottom:6px;">
+  <button type="button" id="btnKirimTestPush" style="width:100%;padding:8px;border:none;border-radius:8px;background:#12294d;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;">Kirim Test</button>
+  <p id="hasilTestPush" style="margin:8px 0 0;font-size:11.5px;color:#6b7280;"></p>
+</div>
+
+<script>
+document.getElementById('btnKirimTestPush').addEventListener('click', async () => {
+  const idRelawan = document.getElementById('testPushIdRelawan').value.trim();
+  const hasil = document.getElementById('hasilTestPush');
+  if (!idRelawan) { hasil.textContent = 'Isi ID Relawan dulu.'; hasil.style.color = '#b23a3a'; return; }
+
+  hasil.textContent = 'Mengirim...';
+  hasil.style.color = '#6b7280';
+  try {
+    // window.sppgAdminToken sudah tersedia di admin.js kamu (dipakai
+    // fitur admin-role.js/admin-audit.js dkk yang sudah ada)
+    await apiPost('kirimTestPushNotifikasi', { token: window.sppgAdminToken, idRelawan: idRelawan });
+    hasil.textContent = '✅ Berhasil dikirim! Cek HP relawan tersebut.';
+    hasil.style.color = '#1a7a4c';
+  } catch (err) {
+    hasil.textContent = '❌ ' + err.message;
+    hasil.style.color = '#b23a3a';
+  }
+});
+</script>
 </body>
 </html>
