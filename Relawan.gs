@@ -19,6 +19,15 @@ function getRelawanById(id) {
 }
 
 function getDivisiList() {
+  // Divisi jarang berubah -- di-cache 10 menit di server (CacheService)
+  // supaya tidak baca ulang Spreadsheet tiap kali dipanggil. Kalau Admin
+  // baru saja menambah divisi, perubahannya baru terlihat maksimal 10
+  // menit kemudian -- tukar cepat kalau kamu butuh instan (lihat addDivisi
+  // di bawah, sudah menghapus cache ini otomatis begitu ada divisi baru).
+  const cache = CacheService.getScriptCache();
+  const tersimpan = cache.get('cache_divisi_list');
+  if (tersimpan) return JSON.parse(tersimpan);
+
   const sheet = getSheet(NAMA_SHEET.DIVISI);
   const data = sheet.getDataRange().getValues();
   const list = [];
@@ -26,6 +35,7 @@ function getDivisiList() {
     const nama = sanitize(data[i][0]);
     if (nama) list.push(nama);
   }
+  cache.put('cache_divisi_list', JSON.stringify(list), 600); // 10 menit
   return list;
 }
 
@@ -93,6 +103,84 @@ function updateRelawan(body) {
   throw new Error('Relawan tidak ditemukan.');
 }
 
+/**
+ * IMPORT RELAWAN MASSAL — alur: baca CSV di frontend -> kirim baris ke
+ * sini -> backend VALIDASI ULANG (tidak percaya data mentah dari client)
+ * + cek duplikasi -> kalau body.konfirmasi=false cuma PREVIEW (tidak
+ * menulis apa pun) -> Admin lihat hasil -> kirim lagi dengan
+ * konfirmasi=true untuk benar-benar menyimpan yang valid saja.
+ */
+function importRelawanMassal(body) {
+  const usernameAdmin = requireAuth(body.token);
+  const baris = Array.isArray(body.rows) ? body.rows : [];
+  const konfirmasi = body.konfirmasi === true;
+  if (!baris.length) throw new Error('Tidak ada data untuk diimpor.');
+
+  const divisiValid = getDivisiList();
+  const relawanSheet = getSheet(NAMA_SHEET.RELAWAN);
+  const existingData = relawanSheet.getDataRange().getValues();
+  const namaSudahAda = new Set();
+  for (let i = 1; i < existingData.length; i++) {
+    const n = sanitize(existingData[i][1]);
+    if (n) namaSudahAda.add(n.toLowerCase());
+  }
+
+  const hasilValid = [];
+  const hasilTidakValid = [];
+  const hasilDuplikat = [];
+  const namaDalamBatchIni = new Set(); // cegah duplikat ANTAR baris di file yang sama
+
+  baris.forEach((r, idx) => {
+    const nomorBaris = idx + 1;
+    const nama = sanitize(r.nama);
+    const divisi = sanitize(r.divisi);
+
+    if (!nama) { hasilTidakValid.push({ baris: nomorBaris, nama: r.nama || '', alasan: 'Nama kosong' }); return; }
+    if (!divisi) { hasilTidakValid.push({ baris: nomorBaris, nama: nama, alasan: 'Divisi kosong' }); return; }
+    if (!divisiValid.includes(divisi)) { hasilTidakValid.push({ baris: nomorBaris, nama: nama, alasan: 'Divisi "' + divisi + '" tidak dikenali' }); return; }
+
+    const kunciNama = nama.toLowerCase();
+    if (namaSudahAda.has(kunciNama) || namaDalamBatchIni.has(kunciNama)) {
+      hasilDuplikat.push({ baris: nomorBaris, nama: nama, alasan: 'Nama sudah ada' });
+      return;
+    }
+
+    namaDalamBatchIni.add(kunciNama);
+    hasilValid.push({ baris: nomorBaris, nama: nama, divisi: divisi });
+  });
+
+  if (!konfirmasi) {
+    // Mode PREVIEW -- tidak menulis apa pun, cuma laporkan hasil validasi.
+    return {
+      mode: 'preview',
+      totalDiperiksa: baris.length,
+      jumlahValid: hasilValid.length,
+      jumlahTidakValid: hasilTidakValid.length,
+      jumlahDuplikat: hasilDuplikat.length,
+      valid: hasilValid, tidakValid: hasilTidakValid, duplikat: hasilDuplikat
+    };
+  }
+
+  // Mode KONFIRMASI -- benar-benar tulis yang valid.
+  const now = new Date();
+  const barisBaru = hasilValid.map(r => {
+    const id = generateIdRelawan(relawanSheet);
+    // generateIdRelawan baca ulang sheet tiap panggil -- aman dari
+    // tabrakan ID walau ditulis satu-satu lewat appendRow di bawah.
+    relawanSheet.appendRow([id, r.nama, r.divisi, 'AKTIF', now, now]);
+    return { id: id, nama: r.nama, divisi: r.divisi };
+  });
+
+  logAudit_('IMPORT_RELAWAN_MASSAL', 'RELAWAN', '', usernameAdmin, { jumlah: barisBaru.length });
+
+  return {
+    mode: 'konfirmasi',
+    jumlahBerhasil: barisBaru.length,
+    jumlahDilewati: hasilTidakValid.length + hasilDuplikat.length,
+    data: barisBaru
+  };
+}
+
 function addDivisi(body) {
   const nama = sanitize(body.nama);
   if (!nama) throw new Error('Nama divisi wajib diisi.');
@@ -103,5 +191,6 @@ function addDivisi(body) {
   }
   const sheet = getSheet(NAMA_SHEET.DIVISI);
   sheet.appendRow([nama]);
+  CacheService.getScriptCache().remove('cache_divisi_list'); // supaya langsung kelihatan, tidak nunggu 10 menit
   return { nama: nama };
 }

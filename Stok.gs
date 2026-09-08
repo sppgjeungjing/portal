@@ -500,19 +500,37 @@ function prosesTransaksiStok_(body, jenis, akses) {
     ]);
 
     const sheetDetail = getStokDetailSheet();
+    // OPTIMASI: sebelumnya appendRow() + setValue() dipanggil TERPISAH
+    // untuk SETIAP item (kalau 1 transaksi ada 10 barang = 20 operasi
+    // Spreadsheet). Sekarang disiapkan dulu semua di memory, ditulis
+    // SEKALIGUS dalam 1 batch per sheet (2 operasi total, berapa pun
+    // jumlah itemnya).
+    const barisDetailBaru = [];
     itemBersih.forEach(it => {
       const b = petaBarang[it.idBarang];
       const stokSebelum = b.stok;
       const stokSesudah = jenis === 'MASUK' ? stokSebelum + it.jumlah : stokSebelum - it.jumlah;
 
-      sheetDetail.appendRow([
+      barisDetailBaru.push([
         'DTL' + Utilities.getUuid().substring(0, 8), idTransaksi, nomorTransaksi, it.idBarang,
         b.nama, b.satuan, it.jumlah, stokSebelum, stokSesudah
       ]);
 
-      sheetBarang.getRange(b.baris, 7).setValue(stokSesudah);
+      // Update stok di ARRAY dataBarang yang SUDAH ada di memory (bukan
+      // langsung ke sheet) -- ditulis sekaligus di bawah setelah loop ini.
+      dataBarang[b.baris - 1][6] = stokSesudah;
       b.stok = stokSesudah; // jaga-jaga kalau barang yang sama muncul >1x dalam 1 transaksi
     });
+
+    // Tulis SEMUA baris detail sekaligus (1 operasi, bukan N appendRow).
+    sheetDetail.getRange(sheetDetail.getLastRow() + 1, 1, barisDetailBaru.length, barisDetailBaru[0].length)
+      .setValues(barisDetailBaru);
+
+    // Tulis SELURUH kolom stok sekaligus (1 operasi, bukan N setValue) --
+    // aman karena dataBarang di atas sudah berisi nilai TERBARU untuk
+    // baris yang berubah, dan nilai ASLI (tidak berubah) untuk sisanya.
+    const kolomStokBaru = dataBarang.slice(1).map(row => [row[6]]);
+    sheetBarang.getRange(2, 7, kolomStokBaru.length, 1).setValues(kolomStokBaru);
 
     return { success: true, nomorTransaksi: nomorTransaksi, jumlahItem: itemBersih.length };
   } finally {

@@ -24,9 +24,20 @@ function getKalenderSheet() {
 }
 
 /** Semua baris Kalender dengan TANGGAL_OPERASIONAL sudah diseragamkan jadi teks "dd/MM/yyyy". */
+/**
+ * DIMEMOISASI PER EKSEKUSI SCRIPT (bukan CacheService lintas-request --
+ * tidak ada risiko data basi, karena variabel ini otomatis kosong lagi
+ * di eksekusi berikutnya). Sebelumnya fungsi ini terpanggil sampai 3x
+ * membaca Spreadsheet yang SAMA dalam SATU request Dashboard (dari
+ * getStatusOperasionalHariIni, tentukanOperasionalAktifHariIni_,
+ * resolveShiftUntukRelawan_) -- sekarang cukup 1x baca per request.
+ */
+let _cacheKalenderRows = null;
 function getKalenderRows_() {
+  if (_cacheKalenderRows) return _cacheKalenderRows;
   const rows = sheetToObjects(getKalenderSheet());
   rows.forEach(r => { if (r.TANGGAL_OPERASIONAL) r.TANGGAL_OPERASIONAL = bacaTanggalDMY_(r.TANGGAL_OPERASIONAL); });
+  _cacheKalenderRows = rows;
   return rows;
 }
 
@@ -209,4 +220,36 @@ function hapusSemuaOperasionalPeriode(body) {
     }
   }
   return { dihapus: dihapus };
+}
+
+/**
+ * Status Operasional 3-tingkat untuk Dashboard: OPERASIONAL / LIBUR /
+ * OPERASIONAL_TERBATAS. Kalender Operasional (sheet yang sudah ada) jadi
+ * SUMBER UTAMA -- override default Senin-Jumat=operasional, Sabtu-Minggu
+ * =libur. TIDAK menambah kolom baru: "Terbatas" dideteksi dari kata kunci
+ * di KETERANGAN yang sudah ada (kolom bebas teks), bukan kolom baru.
+ */
+function getStatusOperasionalHariIni() {
+  const now = new Date();
+  const hariIniStr = formatTanggal(now);
+  const hariMinggu = now.getDay(); // 0=Minggu, 6=Sabtu (pakai timezone server, konsisten dgn formatTanggal di file ini)
+
+  const entriHariIni = getKalenderRows_().find(k => k.TANGGAL_OPERASIONAL === hariIniStr);
+
+  if (entriHariIni) {
+    if (String(entriHariIni.STATUS).toUpperCase() === 'DIBATALKAN') {
+      return { status: 'LIBUR', label: '🔴 LIBUR', keterangan: entriHariIni.KETERANGAN || '' };
+    }
+    const ketLower = String(entriHariIni.KETERANGAN || '').toLowerCase();
+    if (ketLower.indexOf('terbatas') !== -1) {
+      return { status: 'OPERASIONAL_TERBATAS', label: '🟡 OPERASIONAL TERBATAS', keterangan: entriHariIni.KETERANGAN };
+    }
+    return { status: 'OPERASIONAL', label: '🟢 OPERASIONAL', keterangan: entriHariIni.KETERANGAN || '' };
+  }
+
+  // Tidak ada entri Kalender untuk hari ini -- fallback ke default mingguan.
+  const isWeekend = (hariMinggu === 0 || hariMinggu === 6);
+  return isWeekend
+    ? { status: 'LIBUR', label: '🔴 LIBUR', keterangan: '' }
+    : { status: 'OPERASIONAL', label: '🟢 OPERASIONAL', keterangan: '' };
 }

@@ -21,6 +21,50 @@ function doGet(e) {
     if (!action) return gagal('Aksi API tidak diberikan oleh permintaan.', 'MISSING_ACTION');
     let data;
     switch (action) {
+      case 'getJadwalRelawan':
+        data = getJadwalRelawan(e.parameter.token);
+        break;
+      case 'getJadwalListAdmin':
+        requireAuth(e.parameter.token);
+        data = getJadwalListAdmin();
+        break;
+      case 'getInformasiRelawan':
+        data = getInformasiRelawan(e.parameter.token);
+        break;
+      case 'getInformasiListAdmin':
+        requireAuth(e.parameter.token);
+        data = getInformasiListAdmin();
+        break;
+      case 'getDokumenRelawan':
+        data = getDokumenRelawan(e.parameter.token);
+        break;
+      case 'getDokumenListAdmin':
+        requireAuth(e.parameter.token);
+        data = getDokumenListAdmin();
+        break;
+      case 'getNotifikasiRelawan':
+        data = getNotifikasiRelawan(e.parameter.token);
+        break;
+      case 'getPengumumanListAdmin':
+        requireAuth(e.parameter.token);
+        data = getPengumumanListAdmin();
+        break;
+      case 'getNotifikasiListAdmin':
+        requireAuth(e.parameter.token);
+        data = getNotifikasiListAdmin();
+        break;
+      case 'getRekapDetailUntukExport':
+        data = getRekapDetailUntukExport(e.parameter.token, e.parameter.periodeAwal, e.parameter.periodeAkhir);
+        break;
+      case 'getTrenKehadiran7Hari':
+        data = getTrenKehadiran7Hari(e.parameter.token);
+        break;
+      case 'getDashboardLengkapRelawan':
+        data = getDashboardLengkapRelawan(e.parameter.token);
+        break;
+      case 'getJadwalSayaHariIni':
+        data = getJadwalSayaHariIni(e.parameter.token);
+        break;
       case 'health':
         data = { status: 'OK', waktuServer: new Date().toISOString() };
         break;
@@ -188,6 +232,9 @@ function doPost(e) {
       case 'logout':
         data = logoutAdmin(body);
         break;
+      case 'logoutAdmin':
+        data = logoutAdmin(body);
+        break;
       case 'resetAdminPasswordWithCode':
         data = resetAdminPasswordWithCode(body);
         break;
@@ -248,11 +295,62 @@ function doPost(e) {
       case 'updateProfilRelawan':
         data = updateProfilRelawan(body);
         break;
+      case 'kirimTestPushNotifikasi':
+        data = kirimTestPushNotifikasi(body);
+        break;
+      case 'simpanTokenPushNotifikasi':
+        data = simpanTokenPushNotifikasi(body);
+        break;
+      case 'nonaktifkanPushNotifikasi':
+        data = nonaktifkanPushNotifikasi(body);
+        break;
       case 'gantiUsernameRelawan':
         data = gantiUsernameRelawan(body);
         break;
       case 'simpanFotoProfilRelawan':
         data = simpanFotoProfilRelawan(body);
+        break;
+      case 'addJadwal':
+        requireAuth(body.token);
+        data = addJadwal(body);
+        break;
+      case 'updateJadwal':
+        requireAuth(body.token);
+        data = updateJadwal(body);
+        break;
+      case 'deleteJadwal':
+        requireAuth(body.token);
+        data = deleteJadwal(body);
+        break;
+      case 'addInformasi':
+        requireAuth(body.token);
+        data = addInformasi(body);
+        break;
+      case 'updateInformasi':
+        requireAuth(body.token);
+        data = updateInformasi(body);
+        break;
+      case 'updateStatusInformasi':
+        requireAuth(body.token);
+        data = updateStatusInformasi(body);
+        break;
+      case 'addDokumen':
+        requireAuth(body.token);
+        data = addDokumen(body);
+        break;
+      case 'updateStatusDokumen':
+        requireAuth(body.token);
+        data = updateStatusDokumen(body);
+        break;
+      case 'addPengumuman':
+        requireAuth(body.token);
+        data = addPengumuman(body);
+        break;
+      case 'addNotifikasiSistem':
+        data = addNotifikasiSistem(body);
+        break;
+      case 'importRelawanMassal':
+        data = importRelawanMassal(body);
         break;
       case 'gantiPasswordRelawan':
         data = gantiPasswordRelawan(body);

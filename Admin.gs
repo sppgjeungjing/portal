@@ -130,3 +130,104 @@ function setupAdminPassword() {
   sheet.getRange(2, 1, 1, 3).setValues([[USERNAME_BARU, hash, salt]]);
   Logger.log('Akun admin berhasil dibuat/diperbarui. Username: ' + USERNAME_BARU);
 }
+
+/**
+ * LUPA PASSWORD ADMIN — bagian 1 dari 2.
+ * DIJALANKAN MANUAL dari editor Apps Script oleh developer/pengelola
+ * sistem (BUKAN dipanggil dari web) -- sesuai teks yang sudah ada di
+ * admin.html: "Kode reset didapat dari developer/pengelola sistem —
+ * dibuat manual, bukan otomatis. Berlaku 15 menit."
+ *
+ * Cara pakai: ganti USERNAME_ADMIN di bawah, jalankan fungsi ini dari
+ * editor, lalu lihat kode 6 digit di Logger (View > Logs) dan sampaikan
+ * ke Admin yang bersangkutan lewat WhatsApp/telepon (BUKAN lewat email/
+ * chat yang bisa disadap, karena kode ini setara akses masuk).
+ *
+ * Butuh 2 kolom baru di 06_ADMIN: RESET_KODE, RESET_KODE_KADALUARSA
+ */
+function buatKodeResetAdminPassword() {
+  const USERNAME_ADMIN = 'admin'; // <-- GANTI dengan username Admin yang lupa password
+
+  const sheet = getSheet(NAMA_SHEET.ADMIN);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim());
+  const idxUser = headers.indexOf('USERNAME');
+  const idxKode = headers.indexOf('RESET_KODE');
+  const idxKadaluarsa = headers.indexOf('RESET_KODE_KADALUARSA');
+
+  if (idxKode === -1 || idxKadaluarsa === -1) {
+    throw new Error('Kolom RESET_KODE / RESET_KODE_KADALUARSA belum ada di 06_ADMIN. Tambahkan dulu kedua kolom itu.');
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idxUser]).toLowerCase() === USERNAME_ADMIN.toLowerCase()) {
+      const kode = String(Math.floor(100000 + Math.random() * 900000)); // 6 digit
+      const kadaluarsa = new Date(Date.now() + 15 * 60 * 1000);
+      sheet.getRange(i + 1, idxKode + 1).setValue(kode);
+      sheet.getRange(i + 1, idxKadaluarsa + 1).setValue(kadaluarsa);
+      Logger.log('Kode reset untuk "' + USERNAME_ADMIN + '": ' + kode + ' (berlaku 15 menit sampai ' + kadaluarsa + ')');
+      return;
+    }
+  }
+  throw new Error('Username Admin "' + USERNAME_ADMIN + '" tidak ditemukan di 06_ADMIN.');
+}
+
+/**
+ * LUPA PASSWORD ADMIN — bagian 2 dari 2.
+ * Dipanggil dari web (form "Lupa Password" di admin.html) setelah Admin
+ * menerima kode dari langkah 1 di atas.
+ */
+function resetAdminPasswordWithCode(body) {
+  const username = sanitize(body.username);
+  const kode = sanitize(body.kode);
+  const passwordBaru = body.passwordBaru;
+  if (!username || !kode || !passwordBaru) throw new Error('Username, kode, dan password baru wajib diisi.');
+  if (String(passwordBaru).length < 6) throw new Error('Password baru minimal 6 karakter.');
+
+  const sheet = getSheet(NAMA_SHEET.ADMIN);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim());
+  const idxUser = headers.indexOf('USERNAME');
+  const idxKode = headers.indexOf('RESET_KODE');
+  const idxKadaluarsa = headers.indexOf('RESET_KODE_KADALUARSA');
+  const idxHash = headers.indexOf('PASSWORD_HASH');
+  const idxSalt = headers.indexOf('SALT');
+
+  if (idxKode === -1 || idxKadaluarsa === -1) {
+    throw new Error('Kolom RESET_KODE / RESET_KODE_KADALUARSA belum ada di 06_ADMIN.');
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idxUser]).toLowerCase() === username.toLowerCase()) {
+      const kodeTersimpan = String(data[i][idxKode] || '');
+      const kadaluarsa = data[i][idxKadaluarsa];
+
+      if (!kodeTersimpan || kodeTersimpan !== kode) {
+        throw new Error('Kode reset salah. Minta kode baru dari developer/pengelola sistem.');
+      }
+      if (!(kadaluarsa instanceof Date) || kadaluarsa.getTime() < Date.now()) {
+        throw new Error('Kode reset sudah kadaluarsa (berlaku 15 menit). Minta kode baru.');
+      }
+
+      const salt = Utilities.getUuid();
+      const hash = hashPassword(passwordBaru, salt);
+      sheet.getRange(i + 1, idxHash + 1).setValue(hash);
+      sheet.getRange(i + 1, idxSalt + 1).setValue(salt);
+      // Kode dipakai sekali -- kosongkan supaya tidak bisa dipakai ulang.
+      sheet.getRange(i + 1, idxKode + 1).setValue('');
+      sheet.getRange(i + 1, idxKadaluarsa + 1).setValue('');
+
+      logAudit_('RESET_PASSWORD_ADMIN', 'ADMIN', username, username, {});
+      return { success: true };
+    }
+  }
+  throw new Error('Username Admin tidak ditemukan.');
+}
+
+/** Logout Admin -- hapus sesi dari CacheService supaya token tidak bisa dipakai lagi. */
+function logoutAdmin(body) {
+  if (body && body.token) {
+    CacheService.getScriptCache().remove('sesi_' + body.token);
+  }
+  return { success: true };
+}

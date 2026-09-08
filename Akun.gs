@@ -337,7 +337,22 @@ function getProfilRelawan(token) {
     status: relawan.status,
     username: akun.data[akun.idx.USERNAME],
     noHp: akun.data[akun.idx.NO_HP] || '',
-    email: akun.data[akun.idx.EMAIL] || ''
+    email: akun.data[akun.idx.EMAIL] || '',
+    // ======================================================
+    // PERBAIKAN KRITIS: field-field ini SUDAH BISA DITULIS oleh
+    // updateProfilRelawan/simpanFotoProfilRelawan sejak lama, tapi
+    // TIDAK PERNAH DIKEMBALIKAN di sini -- akibatnya data yang sudah
+    // tersimpan di sheet terlihat "hilang lagi" setiap kali profil
+    // dimuat ulang (padahal datanya aman di sheet, cuma tidak pernah
+    // dikirim balik ke frontend). Ini JUGA penyebab avatar header
+    // tidak muncul, karena app-shell.js butuh fotoProfilUrl dari sini.
+    // ======================================================
+    tanggalLahir: (akun.idx.TANGGAL_LAHIR !== undefined) ? (akun.data[akun.idx.TANGGAL_LAHIR] || '') : '',
+    jenisKelamin: (akun.idx.JENIS_KELAMIN !== undefined) ? (akun.data[akun.idx.JENIS_KELAMIN] || '') : '',
+    alamat: (akun.idx.ALAMAT !== undefined) ? (akun.data[akun.idx.ALAMAT] || '') : '',
+    fotoProfilUrl: (akun.idx.FOTO_PROFIL !== undefined && akun.data[akun.idx.FOTO_PROFIL])
+      ? urlFotoReference_(akun.data[akun.idx.FOTO_PROFIL]) : null,
+    gantiUsername: statusGantiUsername_(akun)
   };
 }
 
@@ -402,6 +417,7 @@ function gantiUsernameRelawan(body) {
   sheet.getRange(akun.baris, akun.idx.USERNAME + 1).setValue(baru);
   sheet.getRange(akun.baris, akun.idx.USERNAME_DIUBAH_PADA + 1).setValue(new Date());
   logAudit_('GANTI_USERNAME', 'AKUN_RELAWAN', idRelawan, idRelawan, { usernameBaru: baru });
+  try { kirimPushNotifikasi_(idRelawan, '🔐 Username Berhasil Diubah', 'Username akun kamu sekarang: ' + baru + '. Kalau bukan kamu yang mengubah, segera hubungi Admin.', {}); } catch (e) { /* jangan gagalkan ganti username kalau push gagal */ }
   return { success: true, username: baru };
 }
 
@@ -448,6 +464,11 @@ function gantiPasswordRelawan(body) {
   sheet.getRange(akun.baris, akun.idx.PASSWORD_HASH + 1).setValue(hashBaru);
   sheet.getRange(akun.baris, akun.idx.SALT + 1).setValue(saltBaru);
   sheet.getRange(akun.baris, akun.idx.WAJIB_GANTI_PASSWORD + 1).setValue(false);
+
+  logAudit_('GANTI_PASSWORD', 'AKUN_RELAWAN', idRelawan, idRelawan, {});
+  // Konfirmasi keamanan: kalau BUKAN relawan itu sendiri yang mengganti
+  // (akun dicuri/disalahgunakan), setidaknya pemilik asli tahu lewat push.
+  try { kirimPushNotifikasi_(idRelawan, '🔐 Password Berhasil Diubah', 'Password akun kamu baru saja diganti. Kalau bukan kamu yang mengubah, segera hubungi Admin.', {}); } catch (e) { /* jangan gagalkan ganti password kalau push gagal */ }
 
   return { success: true };
 }

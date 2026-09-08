@@ -35,7 +35,8 @@ const NAMA_SHEET = {
   SHIFT_DIVISI: '21_SHIFT_DIVISI',
   PENUGASAN_KHUSUS: '22_PENUGASAN_KHUSUS',
   STOK_SATUAN: '23_STOK_SATUAN',
-  AUDIT_LOG: '24_AUDIT_LOG'
+  AUDIT_LOG: '24_AUDIT_LOG',
+  ANTRIAN_PUSH_SIPANDU: '25_ANTRIAN_PUSH_SIPANDU'
 };
 
 /**
@@ -265,4 +266,39 @@ function hashPassword(password, salt) {
 
 function generateToken() {
   return Utilities.getUuid();
+}
+
+/**
+ * TARGET PENERIMA TERPUSAT — dipakai bersama oleh Notifikasi.gs,
+ * Informasi.gs, Pengumuman.gs (satu definisi, bukan 3 logic terpisah
+ * yang bisa berbeda-beda). Format encoding SAMA seperti yang sudah
+ * dipakai Jadwal.gs untuk Jadwal per Divisi:
+ *   "SEMUA"            -> semua relawan aktif
+ *   "DIVISI:NamaDivisi" -> semua relawan aktif di divisi itu
+ *   ID relawan biasa    -> 1 relawan spesifik
+ */
+function cocokTargetPenerima_(nilaiTarget, idRelawanSaya, divisiSaya) {
+  const target = String(nilaiTarget || 'SEMUA');
+  if (!target || target.toUpperCase() === 'SEMUA') return true;
+  if (target.toUpperCase().indexOf('DIVISI:') === 0) {
+    const namaDivisiTarget = target.slice(7).trim().toLowerCase();
+    return divisiSaya && namaDivisiTarget === String(divisiSaya).toLowerCase();
+  }
+  return target === idRelawanSaya;
+}
+
+/** Ubah nilai target (SEMUA/DIVISI:x/ID) jadi daftar ID_RELAWAN aktif yang relevan -- dipakai untuk kirim push/catat notifikasi. */
+function resolveDaftarPenerimaRelawan_(nilaiTarget) {
+  const target = String(nilaiTarget || 'SEMUA');
+  const relawanAktif = sheetToObjects(getSheet(NAMA_SHEET.RELAWAN)).filter(r => String(r.STATUS).toUpperCase() === 'AKTIF');
+
+  if (!target || target.toUpperCase() === 'SEMUA') {
+    return relawanAktif.map(r => r.ID_RELAWAN);
+  }
+  if (target.toUpperCase().indexOf('DIVISI:') === 0) {
+    const namaDivisiTarget = target.slice(7).trim().toLowerCase();
+    return relawanAktif.filter(r => String(r.DIVISI || '').toLowerCase() === namaDivisiTarget).map(r => r.ID_RELAWAN);
+  }
+  // Individu -- pastikan relawan itu memang ada & aktif, bukan asal ID.
+  return relawanAktif.some(r => r.ID_RELAWAN === target) ? [target] : [];
 }

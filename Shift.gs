@@ -255,7 +255,18 @@ function addPenugasanKhusus(body) {
 
   const sheet = getPenugasanKhususSheet();
   const id = generateIdPenugasanKhusus_(sheet);
-  sheet.appendRow([id, idOperasional, idRelawan, jamMasuk, jamPulang, sanitize(body.catatan), new Date()]);
+  const catatan = sanitize(body.catatan);
+  sheet.appendRow([id, idOperasional, idRelawan, jamMasuk, jamPulang, catatan, new Date()]);
+
+  // PENUGASAN BARU -- push notification dipindah ke sini (dari Jadwal.gs
+  // lama yang sekarang deprecated) sesuai konsolidasi sumber jadwal.
+  try {
+    const opRow = getKalenderRows_().find(k => k.ID_OPERASIONAL === idOperasional);
+    const isi = (catatan || 'Penugasan khusus') + (opRow ? ' · ' + opRow.TANGGAL_OPERASIONAL : '') + ' · ' + jamMasuk + (jamPulang ? '-' + jamPulang : '');
+    catatNotifikasi_('Penugasan', '📌 Penugasan Baru', isi, idRelawan);
+    kirimPushNotifikasi_(idRelawan, '📌 Penugasan Baru', isi, { link: '/jadwal.html' });
+  } catch (e) { /* push notif gagal -- jangan gagalkan pembuatan penugasan */ }
+
   return { id: id };
 }
 
@@ -339,4 +350,55 @@ function koreksiTanggalOperasionalAbsensi(body) {
     }
   }
   throw new Error('Baris absensi yang sesuai tidak ditemukan (mungkin sudah dikoreksi sebelumnya).');
+}
+
+/**
+ * "JADWAL SAYA" — SATU SUMBER KEBENARAN dari Shift & Koreksi (BUKAN dari
+ * 10_JADWAL/Jadwal.gs lagi, sesuai instruksi konsolidasi). Menu yang
+ * ditampilkan ke pengguna tetap bernama "Jadwal & Penugasan" -- ini murni
+ * perubahan SUMBER DATA di baliknya.
+ *
+ * Menggabungkan:
+ *   - Status Operasional hari ini (LIBUR -> jadwal = "Libur", tidak perlu
+ *     cek shift sama sekali)
+ *   - resolveShiftUntukRelawan_ (SUDAH ADA) untuk jam masuk/pulang
+ *   - CATATAN dari Penugasan Khusus sebagai deskripsi tugas (kalau sumber
+ *     KHUSUS) -- field ini yang paling dekat menggantikan "Penugasan"
+ *     bebas teks dari sistem manual lama
+ *   - Status absensi AKTUAL hari itu untuk tentukan Terjadwal/Sedang
+ *     Bertugas/Selesai
+ */
+function getJadwalSayaHariIni(token) {
+  const idRelawan = requireAuthRelawan(token);
+  const statusOp = getStatusOperasionalHariIni();
+
+  if (statusOp.status === 'LIBUR') {
+    return { ada: true, waktu: '', penugasan: 'Libur', status: 'Libur' };
+  }
+
+  const operasional = tentukanOperasionalAktifHariIni_(idRelawan);
+  if (!operasional) return { ada: false };
+
+  const shift = resolveShiftUntukRelawan_(idRelawan, operasional.idOperasional);
+  const relawan = getRelawanById(idRelawan);
+
+  let penugasan = relawan ? relawan.divisi : 'Tugas Umum';
+  if (shift && shift.sumber === 'KHUSUS') {
+    const khusus = sheetToObjects(getPenugasanKhususSheet())
+      .find(p => p.ID_OPERASIONAL === operasional.idOperasional && p.ID_RELAWAN === idRelawan);
+    if (khusus && khusus.CATATAN) penugasan = khusus.CATATAN;
+  }
+
+  const waktu = shift ? (shift.jamMasuk + (shift.jamPulang ? ' – ' + shift.jamPulang : '')) : '';
+
+  // Status berdasarkan absensi AKTUAL hari itu -- konsisten dengan yang
+  // dipakai getStatusAbsensiRelawan (Absensi.gs), bukan logic terpisah.
+  const semuaAbsensi = getAbsensiRows_().filter(a => a.ID_RELAWAN === idRelawan && a.ID_OPERASIONAL === operasional.idOperasional);
+  const sudahMasuk = semuaAbsensi.some(a => a.JENIS_ABSENSI === 'MASUK');
+  const sudahPulang = semuaAbsensi.some(a => a.JENIS_ABSENSI === 'PULANG');
+  let status = 'Terjadwal';
+  if (sudahMasuk && sudahPulang) status = 'Selesai';
+  else if (sudahMasuk) status = 'Sedang Bertugas';
+
+  return { ada: true, waktu: waktu, penugasan: penugasan, status: status };
 }

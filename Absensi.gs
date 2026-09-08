@@ -35,12 +35,23 @@
 /** Semua baris 03_DATA_ABSENSI dengan TANGGAL sudah diseragamkan jadi teks "dd/MM/yyyy"
  * (lihat catatan bacaTanggalDMY_ di Utils.gs — perbaikan penting terhadap bug Sheets
  * yang otomatis mengonversi teks tanggal menjadi tipe Date). */
+/**
+ * DIMEMOISASI PER EKSEKUSI SCRIPT (bukan lintas-request). Diverifikasi
+ * AMAN: kedua fungsi yang MENULIS ke sheet Absensi (submitAbsensi,
+ * koreksiTanggalOperasionalAbsensi) tidak pernah memanggil fungsi ini
+ * LAGI setelah menulis dalam eksekusi yang sama -- jadi tidak ada risiko
+ * membaca data basi. Sebelumnya terpanggil sampai belasan kali lintas
+ * modul; dalam satu request Dashboard saja bisa 3x baca sheet yang sama.
+ */
+let _cacheAbsensiRows = null;
 function getAbsensiRows_() {
+  if (_cacheAbsensiRows) return _cacheAbsensiRows;
   const rows = sheetToObjects(getSheet(NAMA_SHEET.ABSENSI));
   rows.forEach(r => {
     if (r.TANGGAL) r.TANGGAL = bacaTanggalDMY_(r.TANGGAL);
     if (r.JAM) r.JAM = bacaJamHMS_(r.JAM);
   });
+  _cacheAbsensiRows = rows;
   return rows;
 }
 
@@ -288,7 +299,13 @@ function buildDetailAbsensi_(row) {
     isIzinSakit: row.KETERANGAN === 'Izin' || row.KETERANGAN === 'Sakit',
     jarakMeter: row.JARAK_METER !== '' && row.JARAK_METER !== undefined ? Number(row.JARAK_METER) : null,
     statusLokasi: row.STATUS_LOKASI || null,
-    fotoUrl: row.FOTO_REFERENCE ? urlFotoReference_(row.FOTO_REFERENCE) : null
+    fotoUrl: row.FOTO_REFERENCE ? urlFotoReference_(row.FOTO_REFERENCE) : null,
+    // BARU: lat/lng AKTUAL saat presensi -- dibutuhkan untuk menampilkan
+    // peta lokasi di Dashboard. Koordinat dapur SPPG TETAP TIDAK
+    // dikirim dari sini (itu ada terpisah di lokasiSppg, dan frontend
+    // sudah diinstruksikan tidak menampilkannya ke relawan).
+    latitude: row.LATITUDE !== '' && row.LATITUDE !== undefined ? Number(row.LATITUDE) : null,
+    longitude: row.LONGITUDE !== '' && row.LONGITUDE !== undefined ? Number(row.LONGITUDE) : null
   };
 }
 
@@ -722,4 +739,139 @@ function getRiwayatAbsensiRelawan(token) {
       keterangan: keterangan
     };
   });
+}
+
+/**
+ * REKAP DETAIL untuk Export (CSV/PDF) — beda dari getRekapDuaMinggu yang
+ * cuma ringkasan angka (jumlah hadir/terlambat dst). Ini rincian PER HARI
+ * PER RELAWAN, sesuai kebutuhan laporan resmi: nama, divisi, tanggal,
+ * jam masuk, jam pulang, status.
+ */
+function getRekapDetailUntukExport(token, periodeAwal, periodeAkhir) {
+  requireAuth(token);
+  periodeAwal = sanitize(periodeAwal);
+  periodeAkhir = sanitize(periodeAkhir);
+  if (!periodeAwal || !periodeAkhir) throw new Error('Periode awal dan akhir wajib diisi.');
+  if (periodeAwal > periodeAkhir) throw new Error('Periode awal tidak boleh setelah periode akhir.');
+
+  const relawanList = getRelawanList(null, false);
+  const namaById = {}; const divisiById = {};
+  relawanList.forEach(r => { namaById[r.id] = r.nama; divisiById[r.id] = r.divisi; });
+
+  const semuaAbsensi = getAbsensiRows_().filter(a => {
+    const iso = tanggalSheetKeIso_(a.TANGGAL);
+    return iso && iso >= periodeAwal && iso <= periodeAkhir;
+  });
+
+  // Kelompokkan per (relawan, tanggal) supaya MASUK & PULANG jadi 1 baris.
+  const kunciMap = {};
+  semuaAbsensi.forEach(a => {
+    const kunci = a.ID_RELAWAN + '|' + a.TANGGAL;
+    if (!kunciMap[kunci]) kunciMap[kunci] = { idRelawan: a.ID_RELAWAN, tanggal: a.TANGGAL, jamMasuk: '', jamPulang: '', keterangan: '', idOperasional: a.ID_OPERASIONAL };
+    if (a.JENIS_ABSENSI === 'MASUK') { kunciMap[kunci].jamMasuk = a.JAM; kunciMap[kunci].keterangan = a.KETERANGAN || ''; }
+    if (a.JENIS_ABSENSI === 'PULANG') kunciMap[kunci].jamPulang = a.JAM;
+  });
+
+  const hasil = Object.values(kunciMap).map(r => {
+    let status;
+    if (r.keterangan === 'Izin') status = 'Izin';
+    else if (r.keterangan === 'Sakit') status = 'Sakit';
+    else if (r.jamMasuk) {
+      const telat = (typeof apakahTerlambatShiftAware_ === 'function') ? apakahTerlambatShiftAware_(r.idRelawan, r.idOperasional, r.jamMasuk) : apakahTerlambat(r.jamMasuk);
+      status = telat ? 'Terlambat' : 'Hadir';
+    } else status = 'Tidak Hadir';
+
+    return {
+      nama: namaById[r.idRelawan] || r.idRelawan,
+      divisi: divisiById[r.idRelawan] || '-',
+      tanggal: r.tanggal,
+      jamMasuk: r.jamMasuk || '-',
+      jamPulang: r.jamPulang || '-',
+      status: status
+    };
+  }).sort((a, b) => a.tanggal.localeCompare(b.tanggal) || a.nama.localeCompare(b.nama));
+
+  return { periodeAwal: periodeAwal, periodeAkhir: periodeAkhir, data: hasil };
+}
+
+/** Tren kehadiran 7 hari terakhir -- dipakai grafik ringan Dashboard Admin. */
+function getTrenKehadiran7Hari(token) {
+  requireAuth(token);
+  const relawanAktifCount = sheetToObjects(getSheet(NAMA_SHEET.RELAWAN)).filter(r => String(r.STATUS).toUpperCase() === 'AKTIF').length;
+  const semuaAbsensi = getAbsensiRows_();
+
+  const hasil = [];
+  for (let i = 6; i >= 0; i--) {
+    const tgl = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+    const tglIso = tanggalSheetKeIso_(formatTanggal(tgl));
+    const hadirHariItu = new Set();
+    semuaAbsensi.forEach(a => {
+      if (a.JENIS_ABSENSI === 'MASUK' && tanggalSheetKeIso_(a.TANGGAL) === tglIso) hadirHariItu.add(a.ID_RELAWAN);
+    });
+    hasil.push({
+      tanggal: Utilities.formatDate(tgl, Session.getScriptTimeZone(), 'dd/MM'),
+      hadir: hadirHariItu.size,
+      totalRelawan: relawanAktifCount
+    });
+  }
+  return hasil;
+}
+
+/**
+ * DASHBOARD LENGKAP — 1 pemanggilan untuk seluruh data yang dibutuhkan
+ * Dashboard relawan (hemat request, sesuai prinsip "jangan request
+ * berkali-kali"). SENGAJA memanggil ULANG fungsi-fungsi yang SUDAH ADA
+ * (getStatusAbsensiRelawan, getStatusOperasionalHariIni, getJadwalRelawan,
+ * getRiwayatAbsensiRelawan, getInformasiRelawan) -- BUKAN menulis ulang
+ * logicnya di sini, supaya tidak ada 2 sumber kebenaran yang bisa beda.
+ */
+function getDashboardLengkapRelawan(token) {
+  const idRelawan = requireAuthRelawan(token);
+  const relawan = getRelawanById(idRelawan);
+  const akun = cariAkunByIdRelawan_(idRelawan);
+
+  const presensi = getStatusAbsensiRelawan(token);
+  const statusOperasional = getStatusOperasionalHariIni();
+
+  // JADWAL SAYA -- SUMBER DIALIHKAN ke Shift & Koreksi (getJadwalSayaHariIni)
+  // sesuai instruksi konsolidasi. Jadwal.gs (manual lama) TIDAK LAGI dipakai
+  // sebagai sumber di sini -- lihat catatan DEPRECATED di Jadwal.gs.
+  let jadwalHariIni = null;
+  try {
+    const j = getJadwalSayaHariIni(token);
+    if (j.ada) jadwalHariIni = { waktu: j.waktu, penugasan: j.penugasan, status: j.status };
+  } catch (e) { /* modul Shift mungkin belum diisi Admin -- Dashboard tetap tampil tanpa bagian ini */ }
+
+  // Ringkasan Kehadiran (4 kategori: Total Hadir/Terlambat/Izin-Sakit/Tidak
+  // Hadir) -- dihitung dari getRiwayatAbsensiRelawan yang SUDAH ADA.
+  let ringkasanKehadiran = { totalHadir: 0, terlambat: 0, izinSakit: 0, tidakHadir: 0 };
+  try {
+    const riwayat = getRiwayatAbsensiRelawan(token);
+    (riwayat.items || []).forEach(item => {
+      if (item.status === 'Hadir') ringkasanKehadiran.totalHadir++;
+      else if (item.status === 'Terlambat') { ringkasanKehadiran.totalHadir++; ringkasanKehadiran.terlambat++; }
+      else if (item.status === 'Izin' || item.status === 'Sakit') ringkasanKehadiran.izinSakit++;
+      else if (item.status === 'Tidak Hadir') ringkasanKehadiran.tidakHadir++;
+    });
+  } catch (e) { /* diamkan -- tampilkan 0 kalau gagal, jangan gagalkan seluruh Dashboard */ }
+
+  // Informasi Penting -- 5 item teratas saja dari getInformasiRelawan yang SUDAH ADA.
+  let informasiPenting = [];
+  try { informasiPenting = getInformasiRelawan(token).slice(0, 5); } catch (e) { /* diamkan */ }
+
+  return {
+    identitas: {
+      nama: relawan ? relawan.nama : '',
+      id: idRelawan,
+      divisi: relawan ? relawan.divisi : '',
+      statusAkun: akun ? String(akun.data[akun.idx.STATUS_AKUN] || '').toUpperCase() : '',
+      fotoProfilUrl: (akun && akun.idx.FOTO_PROFIL !== undefined && akun.data[akun.idx.FOTO_PROFIL])
+        ? urlFotoReference_(akun.data[akun.idx.FOTO_PROFIL]) : null
+    },
+    statusOperasional: statusOperasional,
+    jadwalHariIni: jadwalHariIni,
+    presensiHariIni: presensi,
+    ringkasanKehadiran: ringkasanKehadiran,
+    informasiPenting: informasiPenting
+  };
 }
