@@ -18,14 +18,14 @@ const GOOGLE_APPS_SCRIPT_WEB_APP_URL =
 
 // ============================================================
 // SIPANDU
-// Menu SIPANDU di dalam Portal Relawan yang sama (satu login,
-// sesi relawan yang sama) -- TAPI backend & database-nya sengaja
-// terpisah (proyek Apps Script sendiri + Spreadsheet sendiri),
-// sesuai keputusan arsitektur "PROMPT MASTER FINAL".
+// DIGABUNG ke proyek Apps Script Portal Relawan yang sama sejak paket
+// ini (menghilangkan masalah "sesi ditolak" akibat CacheService antar
+// proyek yang tidak bisa saling dibaca). Database (Spreadsheet) SIPANDU
+// TETAP TERPISAH -- diakses lewat Script Property SIPANDU_SPREADSHEET_ID
+// di sisi Apps Script, bukan di sini.
 // ============================================================
 
-const SIPANDU_API_URL =
-  'https://script.google.com/macros/s/AKfycbyMOXMtHP2MPGBiOwLQ3M_7l-CzNCN7FD_oMB7yFPXudoOUwDCvG9WOo9dwEPqW-bQizg/exec';
+const SIPANDU_API_URL = GOOGLE_APPS_SCRIPT_WEB_APP_URL;
 
 // ============================================================
 // SYSTEM
