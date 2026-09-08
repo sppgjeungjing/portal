@@ -276,11 +276,31 @@
    atas 3 aturan lama yang saling tumpang tindih (v1/v2.1/v2.2 di atas).
    ================================================================ */
 .shell-topbar { position: relative; }
-.shell-topbar-brand--portal {
-  position: absolute; left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  flex: none; width: max-content;
+
+/* Trik "center absolut di halaman" HANYA untuk layar lebar (desktop) --
+   di layar sempit (HP), brand (2 logo + teks) yang lebar bisa MENIMPA
+   lonceng/avatar di kanan kalau tetap absolute. Di HP, biarkan brand
+   ikut alur flex normal (flex:1, center di RUANG SISA) -- kurang presisi
+   di tengah HALAMAN, tapi TIDAK PERNAH tabrakan dengan elemen lain,
+   yang jauh lebih penting daripada presisi visual semata. */
+@media (min-width: 640px) {
+  .shell-topbar-brand--portal {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    flex: none; width: max-content;
+  }
 }
+@media (max-width: 639px) {
+  .shell-topbar-brand--portal {
+    flex: 1; min-width: 0; justify-content: center;
+    overflow: hidden;
+  }
+  .shell-topbar-brand--portal .shell-topbar-logo-bgn,
+  .shell-topbar-brand--portal .shell-topbar-logo-sppg {
+    flex-shrink: 0;
+  }
+}
+
 .shell-topbar-brand--portal .shell-topbar-brand-text {
   display: flex !important; flex-direction: column !important;
   align-items: center; line-height: 1.15;

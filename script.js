@@ -11,7 +11,7 @@ let fotoDataUrl = null;       // hasil capture kamera (base64 data URL)
 let lokasiSaya = null;        // { latitude, longitude, akurasi }
 let zonaValid = false;        // hasil perhitungan jarak vs radius (client-side, hanya utk UX)
 let streamKamera = null;      // MediaStream aktif, supaya bisa di-stop
-let jenisIzinDipilih = null;  // 'Izin' | 'Sakit' di panel pengajuan
+// (variabel jenisIzinDipilih dipindah ke pengajuan.js -- tidak dipakai di sini lagi)
 
 const el = {};
 
@@ -64,40 +64,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     zonaBadgeWrap: document.getElementById('zonaBadgeWrap'),
     inputKeteranganAbsen: document.getElementById('inputKeteranganAbsen'),
     btnKirimAbsen: document.getElementById('btnKirimAbsen'),
-    btnBukaIzin: document.getElementById('btnBukaIzin'),
 
     stateSelesai: document.getElementById('stateSelesai'),
     detailInfoList: document.getElementById('detailInfoList'),
-    detailFotoWrap: document.getElementById('detailFotoWrap'),
-
-    panelIzinSakit: document.getElementById('panelIzinSakit'),
-    btnPilihIzin: document.getElementById('btnPilihIzin'),
-    btnPilihSakit: document.getElementById('btnPilihSakit'),
-    inputKeteranganIzin: document.getElementById('inputKeteranganIzin'),
-    btnBatalIzin: document.getElementById('btnBatalIzin'),
-    btnKirimIzin: document.getElementById('btnKirimIzin')
+    detailFotoWrap: document.getElementById('detailFotoWrap')
   });
 
   el.btnAmbilFoto.addEventListener('click', ambilSwafoto);
   el.btnUlangFoto.addEventListener('click', mulaiKamera);
   el.inputKeteranganAbsen.addEventListener('input', perbaruiTombolKirim);
   el.btnKirimAbsen.addEventListener('click', kirimAbsensi);
-  el.btnBukaIzin.addEventListener('click', bukaPanelIzin);
-  el.btnBatalIzin.addEventListener('click', tutupPanelIzin);
   el.btnLanjutkanAbsen.addEventListener('click', lanjutkanKeForm);
   el.btnTutupSukses.addEventListener('click', tutupOverlaySukses);
-  el.btnPilihIzin.addEventListener('click', () => pilihJenisIzin('Izin'));
-  el.btnPilihSakit.addEventListener('click', () => pilihJenisIzin('Sakit'));
-
-  // Menu sidebar "Pengajuan Izin / Sakit" mengarah ke absensi.html?izin=1
-  // -- begitu halaman dimuat, langsung buka panel Izin/Sakit otomatis,
-  // supaya terasa seperti menu tersendiri walau sebenarnya bagian dari
-  // halaman Absensi yang sama (tidak menduplikasi fitur yang sudah ada).
-  if (new URLSearchParams(window.location.search).get('izin') === '1') {
-    bukaPanelIzin();
-  }
-  el.inputKeteranganIzin.addEventListener('input', perbaruiTombolIzin);
-  el.btnKirimIzin.addEventListener('click', kirimIzinSakit);
 
   // Kamera & GPS dilepas kalau pengguna pindah halaman/menutup tab, supaya
   // tidak ada indikator kamera menyala terus tanpa alasan.
@@ -139,7 +117,6 @@ function renderStatus() {
   el.stateKonfirmasi.style.display = 'none';
   el.stateForm.style.display = 'none';
   el.stateSelesai.style.display = 'none';
-  el.panelIzinSakit.style.display = 'none';
 
   if (!s.operasional.ada) {
     el.stateKosong.style.display = 'block';
@@ -167,7 +144,6 @@ function renderStatus() {
   }
 
   // Belum masuk sama sekali, operasional tersedia.
-  el.btnBukaIzin.style.display = 'block';
   mulaiFormJenis('MASUK');
 }
 
@@ -525,52 +501,7 @@ function tampilkanSelesaiLengkap() {
 }
 
 // ------------------------------------------------------------
-// PANEL AJUKAN IZIN / SAKIT (tanpa selfie & GPS — lihat catatan Fase 5)
+// Catatan: fungsi Ajukan Izin/Sakit/Cuti SUDAH DIPINDAH ke halaman
+// tersendiri (pengajuan.html + pengajuan.js) -- terpisah dari Presensi,
+// bukan lagi bagian dari alur Absen Masuk/Pulang di file ini.
 // ------------------------------------------------------------
-
-function bukaPanelIzin() {
-  hentikanKamera();
-  el.stateForm.style.display = 'none';
-  jenisIzinDipilih = null;
-  el.inputKeteranganIzin.value = '';
-  el.btnPilihIzin.classList.remove('selected');
-  el.btnPilihSakit.classList.remove('selected');
-  perbaruiTombolIzin();
-  el.panelIzinSakit.style.display = 'block';
-}
-
-function tutupPanelIzin() {
-  el.panelIzinSakit.style.display = 'none';
-  renderStatus();
-}
-
-function pilihJenisIzin(jenis) {
-  jenisIzinDipilih = jenis;
-  el.btnPilihIzin.classList.toggle('selected', jenis === 'Izin');
-  el.btnPilihSakit.classList.toggle('selected', jenis === 'Sakit');
-  perbaruiTombolIzin();
-}
-
-function perbaruiTombolIzin() {
-  el.btnKirimIzin.disabled = !(jenisIzinDipilih && el.inputKeteranganIzin.value.trim());
-}
-
-async function kirimIzinSakit() {
-  if (!jenisIzinDipilih || !el.inputKeteranganIzin.value.trim()) return;
-  el.btnKirimIzin.disabled = true;
-  showLoading('Mengirim pengajuan...');
-  try {
-    await apiPost('ajukanIzinSakit', {
-      token: sesiAbsensi.token,
-      jenisPengajuan: jenisIzinDipilih,
-      keterangan: el.inputKeteranganIzin.value.trim()
-    });
-    hideLoading();
-    showSuccess('Pengajuan ' + jenisIzinDipilih + ' berhasil dikirim.');
-    await muatStatusAbsensi();
-  } catch (err) {
-    hideLoading();
-    showError(err.message || 'Pengajuan gagal dikirim.');
-    perbaruiTombolIzin();
-  }
-}
