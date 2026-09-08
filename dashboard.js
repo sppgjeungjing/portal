@@ -57,11 +57,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusAkunEl.style.background = aktif ? 'rgba(255,255,255,.15)' : 'rgba(178,58,58,.35)';
     document.getElementById('heroIdDivisi').textContent = (d.identitas.id || '–') + ' • ' + (d.identitas.divisi || '–');
 
-    // ---- STATUS OPERASIONAL ----
+    // ---- KOTAK INFORMASI OPERASIONAL ----
     const namaHari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][new Date().getDay()];
     const tglFormat = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-    document.getElementById('statusOperasionalTanggal').textContent = namaHari + ', ' + tglFormat;
-    document.getElementById('statusOperasionalLabel').textContent = d.statusOperasional.label;
+    document.getElementById('infoOperasionalTanggal').textContent = '📅 ' + namaHari + ', ' + tglFormat;
+    document.getElementById('infoOperasionalStatus').textContent = d.statusOperasional.label;
 
     // ---- JADWAL SAYA ----
     const jadwalWrap = document.getElementById('jadwalSayaHariIni');
@@ -97,6 +97,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('radiusLokasiMasuk').textContent = radiusTeks;
     document.getElementById('radiusLokasiPulang').textContent = radiusTeks;
 
+    // ---- TITIK PATOKAN & RADIUS DIIZINKAN ----
+    // Koordinat mentah dapur TIDAK ditampilkan (sesuai instruksi) -- cuma
+    // radius diizinkan vs jarak aktual, dengan kesimpulan valid/tidaknya.
+    const patokanWrap = document.getElementById('patokanRadiusInfo');
+    if (p.lokasiSppg) {
+      const radiusDiizinkan = p.lokasiSppg.radiusMeter;
+      const jarakMasuk = (p.masuk && p.masuk.sudah && p.masuk.jarakMeter != null) ? Math.round(p.masuk.jarakMeter) : null;
+      let html = `<p style="margin:0;">Radius Diizinkan: <strong>${radiusDiizinkan} m</strong></p>`;
+      if (jarakMasuk != null) {
+        const valid = jarakMasuk <= radiusDiizinkan;
+        html += `<p style="margin:2px 0 0;">Jarak Aktual (saat Masuk): <strong>${jarakMasuk} m</strong></p>`;
+        html += `<p style="margin:2px 0 0;color:${valid ? '#1a7a4c' : '#b23a3a'};">${jarakMasuk} m ${valid ? '≤' : '>'} ${radiusDiizinkan} m — presensi ${valid ? 'valid' : 'di luar radius'}</p>`;
+      }
+      patokanWrap.innerHTML = html;
+    } else {
+      patokanWrap.innerHTML = '<p style="margin:0;">Data lokasi acuan belum diatur Admin.</p>';
+    }
+
     if (p.masuk && p.masuk.sudah && p.masuk.fotoUrl) {
       document.getElementById('swafotoMasukWrap').innerHTML = `<img src="${p.masuk.fotoUrl}" alt="Swafoto masuk" style="width:100%;height:100%;object-fit:cover;">`;
     }
@@ -124,10 +142,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
-    // ---- RINGKASAN KEHADIRAN ----
+    // ---- RINGKASAN KEHADIRAN (4 kategori) ----
     document.getElementById('totalHadirPeriode').textContent = d.ringkasanKehadiran.totalHadir;
     document.getElementById('totalTerlambatPeriode').textContent = d.ringkasanKehadiran.terlambat;
+    document.getElementById('totalIzinSakitPeriode').textContent = d.ringkasanKehadiran.izinSakit;
     document.getElementById('totalTidakHadirPeriode').textContent = d.ringkasanKehadiran.tidakHadir;
+
+    // ---- MENU UTAMA: tombol "Lainnya" buka sidebar yang sudah ada ----
+    document.getElementById('btnMenuLainnya').addEventListener('click', () => {
+      const burger = document.querySelector('.shell-topbar-burger');
+      if (burger) burger.click();
+    });
 
     // ---- INFORMASI PENTING ----
     const infoWrap = document.getElementById('infoPentingList');

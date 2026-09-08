@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function muatProfil() {
     try {
       showLoading('Memuat profil...');
-      const profil = await apiGet('getProfilRelawan', { token: sesi.token });
+      const profil = await (window.sppgProfilPromise || apiGet('getProfilRelawan', { token: sesi.token }));
       hideLoading();
 
       document.getElementById('namaRelawan').textContent = profil.nama;

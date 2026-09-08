@@ -109,7 +109,7 @@ async function bootRelawanShell() {
     btnLogout.addEventListener('click', async () => {
       try { await apiPost('logoutRelawan', { token: sesi.token }); } catch (e) { /* tetap keluar walau offline */ }
       hapusSesiRelawan();
-      window.location.href = 'index.html';
+      window.location.href = 'portal.html';
     });
   }
 

@@ -158,7 +158,7 @@
     formPengumuman: document.getElementById('formPengumuman'),
     inputJudulPengumuman: document.getElementById('inputJudulPengumuman'),
     inputIsiPengumuman: document.getElementById('inputIsiPengumuman'),
-    selectTargetPengumuman: document.getElementById('selectTargetPengumuman'),
+    // selectTargetPengumuman lama sudah diganti widget target (Semua/Divisi/Individu) -- lihat admin-target-widget.js
     inputJadwalPublikasi: document.getElementById('inputJadwalPublikasi'),
     listPengumumanAdmin: document.getElementById('listPengumumanAdmin')
   };
@@ -974,14 +974,18 @@
 
   el.formTambahInformasi.addEventListener('submit', async (e) => {
     e.preventDefault();
+    let targetPenerima;
+    try { targetPenerima = ambilNilaiTargetWidget('Informasi'); } catch (err) { showError(err.message); return; }
     showLoading('Menambah informasi...');
     try {
       await apiPost('addInformasi', {
         token: authToken,
         judul: el.inputJudulInformasi.value.trim(),
-        isi: el.inputIsiInformasi.value.trim()
+        isi: el.inputIsiInformasi.value.trim(),
+        targetPenerima: targetPenerima
       });
       el.formTambahInformasi.reset();
+      resetTargetWidget('Informasi');
       await muatUlangInformasi();
       showSuccess('Informasi berhasil ditambahkan.');
     } catch (err) {
@@ -1553,20 +1557,24 @@
   if (el.formTambahNotifikasi) {
     el.formTambahNotifikasi.addEventListener('submit', async (e) => {
       e.preventDefault();
+      let idRelawanTarget;
+      try { idRelawanTarget = ambilNilaiTargetWidget('Notifikasi'); } catch (err) { showError(err.message); return; }
       showLoading('Mengirim notifikasi...');
       try {
         await apiPost('addNotifikasiSistem', {
           token: authToken,
           judul: el.inputJudulNotifikasi.value.trim(),
           isi: el.inputIsiNotifikasi.value.trim(),
-          kategori: 'Sistem'
+          kategori: 'Sistem',
+          idRelawan: idRelawanTarget
         });
         el.formTambahNotifikasi.reset();
+        resetTargetWidget('Notifikasi');
         const ulang = await apiGet('getNotifikasiListAdmin', { token: authToken });
         cache.notifikasiList = ulang;
         renderNotifikasiAdmin();
         renderOverview();
-        showSuccess('Notifikasi terkirim ke semua relawan.');
+        showSuccess('Notifikasi berhasil dikirim.');
       } catch (err) {
         showError(err.message || 'Gagal mengirim notifikasi.');
       } finally {
@@ -1592,16 +1600,19 @@
   if (el.formPengumuman) {
     el.formPengumuman.addEventListener('submit', async (e) => {
       e.preventDefault();
+      let targetNilai;
+      try { targetNilai = ambilNilaiTargetWidget('Pengumuman'); } catch (err) { showError(err.message); return; }
       showLoading('Mempublikasikan pengumuman...');
       try {
         await apiPost('addPengumuman', {
           token: authToken,
           judul: el.inputJudulPengumuman.value.trim(),
           isi: el.inputIsiPengumuman.value.trim(),
-          target: el.selectTargetPengumuman.value,
+          target: targetNilai,
           tanggalPublikasi: el.inputJadwalPublikasi.value
         });
         el.formPengumuman.reset();
+        resetTargetWidget('Pengumuman');
         const [pengumumanUlang, informasiUlang, notifikasiUlang] = await Promise.all([
           apiGet('getPengumumanListAdmin', { token: authToken }),
           apiGet('getInformasiListAdmin', { token: authToken }),

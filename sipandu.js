@@ -60,15 +60,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let idWoTerbuka = null;
   let cacheMenu = [];
+  let cacheRoleList = [];
+  let profilSaya = null;
 
   // --------------------------------------------------------
   // Cek akses dulu lewat dashboard -- kalau ditolak, hentikan semua.
   // --------------------------------------------------------
   try {
     showLoading('Memeriksa akses SIPANDU...');
+    profilSaya = await sipanduApiGet('getSipanduProfilSaya', { token });
     await muatDashboard();
     hideLoading();
     el.konten.style.display = 'block';
+
+    if (profilSaya && profilSaya.role === 'ADMIN') {
+      document.getElementById('tabHakAkses').classList.remove('is-hidden');
+    }
   } catch (err) {
     hideLoading();
     el.ditolak.style.display = 'block';
@@ -88,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (btn.dataset.sub === 'dashboard') muatDashboard();
       else if (btn.dataset.sub === 'wo') muatDaftarWo();
-      else if (btn.dataset.sub === 'operasional') muatOperasionalWoList();
+      else if (btn.dataset.sub === 'hakakses') muatHakAkses();
     });
   });
 
@@ -352,248 +359,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ============================================================
-  // OPERASIONAL: Persiapan, Pengolahan, Pemorsian, Distribusi, Cuci Ompreng
-  // Skema backend SIPANDU sekarang masih sederhana (bahan/jumlah/satuan,
-  // dst) -- BELUM selengkap form POP asli (kategori porsi, plat kendaraan
-  // spesifik, foto per tahap). Lihat catatan di laporan pengiriman.
-  // ============================================================
-  const opsEl = {
-    filterWo: document.getElementById('opsFilterWo'),
-    belumPilih: document.getElementById('opsBelumPilihWo'),
-    konten: document.getElementById('opsKontenWo'),
-    tabs: document.querySelectorAll('#opsTabs .chip-tab'),
-    panels: document.querySelectorAll('.ops-panel')
-  };
-  let idWoOperasionalAktif = null;
-  let idDistribusiTujuanAktif = null;
-
-  async function muatOperasionalWoList() {
-    if (opsEl.filterWo.options.length > 1) return; // sudah pernah dimuat
-    try {
-      const list = await sipanduApiGet('getWorkOrderList', { token });
-      opsEl.filterWo.innerHTML = '<option value="">Pilih Work Order...</option>' +
-        list.map(w => `<option value="${escapeHtml(w.id)}">${escapeHtml(w.nomorWO)} — ${escapeHtml(w.tanggal)}</option>`).join('');
-    } catch (err) { showError(err.message); }
-  }
-
-  opsEl.filterWo.addEventListener('change', () => {
-    idWoOperasionalAktif = opsEl.filterWo.value;
-    if (!idWoOperasionalAktif) {
-      opsEl.belumPilih.style.display = 'block';
-      opsEl.konten.style.display = 'none';
-      return;
+  // --------------------------------------------------------
+  // HAK AKSES (khusus role ADMIN)
+  // --------------------------------------------------------
+  async function pastikanRoleListTermuat_() {
+    if (!cacheRoleList.length) {
+      cacheRoleList = await sipanduApiGet('getDaftarRoleSipandu', { token });
     }
-    opsEl.belumPilih.style.display = 'none';
-    opsEl.konten.style.display = 'block';
-    const tabAktif = document.querySelector('#opsTabs .chip-tab.active');
-    muatPanelOperasional_(tabAktif ? tabAktif.dataset.ops : 'persiapan');
-  });
-
-  opsEl.tabs.forEach(btn => {
-    btn.addEventListener('click', () => {
-      opsEl.tabs.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      opsEl.panels.forEach(p => { p.style.display = 'none'; });
-      const nama = btn.dataset.ops.charAt(0).toUpperCase() + btn.dataset.ops.slice(1);
-      document.getElementById('opsPanel' + nama).style.display = 'block';
-      muatPanelOperasional_(btn.dataset.ops);
-    });
-  });
-
-  function muatPanelOperasional_(nama) {
-    if (!idWoOperasionalAktif) return;
-    if (nama === 'persiapan') muatPersiapan();
-    else if (nama === 'pengolahan') muatPengolahan();
-    else if (nama === 'pemorsian') muatPemorsian();
-    else if (nama === 'distribusi') muatDistribusi();
-    else if (nama === 'cuci') muatCuci();
   }
 
-  // ---- PERSIAPAN ----
-  async function muatPersiapan() {
-    const wrap = document.getElementById('listPersiapan');
-    wrap.innerHTML = '<div class="empty-state">Memuat...</div>';
+  async function muatHakAkses() {
+    const wrap = document.getElementById('hakAksesListWrap');
+    wrap.innerHTML = '<div class="empty-state">Memuat data...</div>';
     try {
-      const list = await sipanduApiGet('getPreparationList', { token, idWo: idWoOperasionalAktif });
-      wrap.innerHTML = !list.length ? '<div class="empty-state">Belum ada bahan dicatat.</div>' : list.map(p => `
-        <div class="sipandu-wo-card" style="cursor:default;">
-          <div class="sipandu-wo-card-top"><strong>${escapeHtml(p.bahan)}</strong><span>${p.jumlah} ${escapeHtml(p.satuan || '')}</span></div>
-          <p>Status: ${escapeHtml(p.status)}${p.waktu ? ' · ' + escapeHtml(p.waktu) : ''}</p>
-        </div>`).join('');
-    } catch (err) { wrap.innerHTML = ''; showError(err.message); }
-  }
+      await pastikanRoleListTermuat_();
+      const opsiRole = '<option value="">Belum diberi akses</option>' +
+        cacheRoleList.map(r => `<option value="${escapeHtml(r.kode)}">${escapeHtml(r.nama)}</option>`).join('');
 
-  document.getElementById('formTambahPersiapan').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await sipanduApiPost('addPreparationItem', {
-        token, idWo: idWoOperasionalAktif,
-        bahan: document.getElementById('prpBahan').value.trim(),
-        jumlah: Number(document.getElementById('prpJumlah').value || 0),
-        satuan: document.getElementById('prpSatuan').value.trim()
-      });
-      e.target.reset();
-      showSuccess('Bahan ditambahkan.');
-      muatPersiapan();
-    } catch (err) { showError(err.message); }
-  });
+      const daftar = await sipanduApiGet('getDaftarRelawanUntukHakAkses', { token });
+      if (!daftar.length) { wrap.innerHTML = '<div class="empty-state">Tidak ada relawan aktif ditemukan.</div>'; return; }
 
-  // ---- PENGOLAHAN ----
-  async function muatPengolahan() {
-    const wrap = document.getElementById('listPengolahan');
-    wrap.innerHTML = '<div class="empty-state">Memuat...</div>';
-    try {
-      const list = await sipanduApiGet('getProcessingList', { token, idWo: idWoOperasionalAktif });
-      wrap.innerHTML = !list.length ? '<div class="empty-state">Belum ada kegiatan dicatat.</div>' : list.map(p => `
-        <div class="sipandu-wo-card" style="cursor:default;">
-          <div class="sipandu-wo-card-top"><strong>${escapeHtml(p.kegiatan)}</strong><span>${p.jumlah} ${escapeHtml(p.satuan || '')}</span></div>
-          <p>${escapeHtml(p.bahan || '-')} · Status: ${escapeHtml(p.status)}</p>
-        </div>`).join('');
-    } catch (err) { wrap.innerHTML = ''; showError(err.message); }
-  }
-
-  document.getElementById('formTambahPengolahan').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await sipanduApiPost('addProcessingItem', {
-        token, idWo: idWoOperasionalAktif,
-        kegiatan: document.getElementById('pngKegiatan').value.trim(),
-        bahan: document.getElementById('pngBahan').value.trim(),
-        jumlah: Number(document.getElementById('pngJumlah').value || 0),
-        satuan: document.getElementById('pngSatuan').value.trim()
-      });
-      e.target.reset();
-      showSuccess('Kegiatan ditambahkan.');
-      muatPengolahan();
-    } catch (err) { showError(err.message); }
-  });
-
-  // ---- PEMORSIAN ----
-  async function muatPemorsian() {
-    const wrap = document.getElementById('listPemorsian');
-    wrap.innerHTML = '<div class="empty-state">Memuat...</div>';
-    try {
-      const list = await sipanduApiGet('getPortioningList', { token, idWo: idWoOperasionalAktif });
-      wrap.innerHTML = !list.length ? '<div class="empty-state">Belum ada sesi pemorsian.</div>' : list.map(p => `
-        <div class="sipandu-wo-card" data-id="${escapeHtml(p.id)}" style="cursor:default;">
-          <div class="sipandu-wo-card-top"><strong>${escapeHtml(p.sesi)}</strong><span>Target ${p.target}</span></div>
-          <p>Status: ${escapeHtml(p.status)} · Hasil: ${p.jumlahSelesai}/${p.target}</p>
-          ${p.status !== 'SELESAI' ? `<div class="inline-form-relawan" style="margin-top:8px;">
-            <input type="number" class="input-hasil-sesi" placeholder="Jumlah hasil" min="0">
-            <button type="button" class="btn-outline btn-selesaikan-sesi" data-id="${escapeHtml(p.id)}">Catat Hasil &amp; Selesai</button>
-          </div>` : ''}
+      wrap.innerHTML = daftar.map(r => `
+        <div class="sipandu-hakakses-row" data-id="${escapeHtml(r.id)}">
+          <span class="nama">${escapeHtml(r.nama)}</span>
+          <select class="select-role-hakakses">${opsiRole}</select>
         </div>`).join('');
 
-      wrap.querySelectorAll('.btn-selesaikan-sesi').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const input = btn.closest('.sipandu-wo-card').querySelector('.input-hasil-sesi');
+      wrap.querySelectorAll('.sipandu-hakakses-row').forEach(row => {
+        const id = row.dataset.id;
+        const data = daftar.find(r => r.id === id);
+        const select = row.querySelector('.select-role-hakakses');
+        select.value = data.aktifDiSipandu ? data.roleSipandu : '';
+
+        select.addEventListener('change', async () => {
           try {
-            await sipanduApiPost('updatePortioningSesi', { token, id: btn.dataset.id, jumlahSelesai: Number(input.value || 0), status: 'SELESAI' });
-            showSuccess('Sesi pemorsian selesai dicatat.');
-            muatPemorsian();
-          } catch (err) { showError(err.message); }
+            if (!select.value) {
+              await sipanduApiPost('cabutSipanduUserRole', { token, idRelawan: id });
+              showSuccess('Akses ' + data.nama + ' dicabut dari SIPANDU.');
+            } else {
+              await sipanduApiPost('setSipanduUserRole', { token, idRelawan: id, nama: data.nama, role: select.value, aktif: true });
+              showSuccess('Role ' + data.nama + ' diatur jadi ' + select.value + '.');
+            }
+          } catch (err) {
+            showError(err.message);
+            await muatHakAkses();
+          }
         });
       });
-    } catch (err) { wrap.innerHTML = ''; showError(err.message); }
+    } catch (err) {
+      wrap.innerHTML = '';
+      showError(err.message);
+    }
   }
-
-  document.getElementById('formTambahSesi').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await sipanduApiPost('addPortioningSesi', {
-        token, idWo: idWoOperasionalAktif,
-        sesi: document.getElementById('pmrSesi').value.trim(),
-        target: Number(document.getElementById('pmrTarget').value || 0)
-      });
-      e.target.reset();
-      showSuccess('Sesi pemorsian dibuka.');
-      muatPemorsian();
-    } catch (err) { showError(err.message); }
-  });
-
-  // ---- DISTRIBUSI ----
-  async function muatDistribusi() {
-    const wrap = document.getElementById('listDistribusi');
-    wrap.innerHTML = '<div class="empty-state">Memuat...</div>';
-    try {
-      const list = await sipanduApiGet('getDistributionList', { token, idWo: idWoOperasionalAktif });
-      wrap.innerHTML = !list.length ? '<div class="empty-state">Belum ada armada ditugaskan.</div>' : list.map(r => `
-        <div class="sipandu-wo-card" style="cursor:default;">
-          <div class="sipandu-wo-card-top"><strong>${escapeHtml(r.namaKurir)}</strong><span>${escapeHtml(r.kendaraan || '-')}</span></div>
-          ${r.tujuan.map(t => `<p>📍 ${escapeHtml(t.namaTujuan)} — ${t.jumlahPorsi} porsi ${t.jam ? '(' + escapeHtml(t.jam) + ')' : ''} · <em>${escapeHtml(t.status)}</em></p>`).join('')}
-          <button type="button" class="btn-outline btn-tambah-tujuan" data-id="${escapeHtml(r.id)}" style="margin-top:6px;">+ Tambah Tujuan</button>
-        </div>`).join('');
-
-      wrap.querySelectorAll('.btn-tambah-tujuan').forEach(btn => {
-        btn.addEventListener('click', () => {
-          idDistribusiTujuanAktif = btn.dataset.id;
-          document.getElementById('formTambahTujuan').reset();
-          document.getElementById('modalTambahTujuan').classList.remove('is-hidden');
-        });
-      });
-    } catch (err) { wrap.innerHTML = ''; showError(err.message); }
-  }
-
-  document.getElementById('formTambahArmada').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await sipanduApiPost('addDistributionRoute', {
-        token, idWo: idWoOperasionalAktif,
-        namaKurir: document.getElementById('dstKurir').value.trim(),
-        kendaraan: document.getElementById('dstKendaraan').value.trim()
-      });
-      e.target.reset();
-      showSuccess('Armada ditambahkan.');
-      muatDistribusi();
-    } catch (err) { showError(err.message); }
-  });
-
-  document.getElementById('btnBatalTambahTujuan').addEventListener('click', () => {
-    document.getElementById('modalTambahTujuan').classList.add('is-hidden');
-  });
-
-  document.getElementById('formTambahTujuan').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await sipanduApiPost('addDistributionStop', {
-        token, idDistribution: idDistribusiTujuanAktif,
-        namaTujuan: document.getElementById('tjnNama').value.trim(),
-        jumlahPorsi: Number(document.getElementById('tjnJumlahPorsi').value || 0),
-        jam: document.getElementById('tjnJam').value,
-        catatan: document.getElementById('tjnCatatan').value.trim()
-      });
-      document.getElementById('modalTambahTujuan').classList.add('is-hidden');
-      showSuccess('Tujuan ditambahkan.');
-      muatDistribusi();
-    } catch (err) { showError(err.message); }
-  });
-
-  // ---- CUCI OMPRENG ----
-  async function muatCuci() {
-    const wrap = document.getElementById('listCuci');
-    wrap.innerHTML = '<div class="empty-state">Memuat...</div>';
-    try {
-      const list = await sipanduApiGet('getWashingList', { token, idWo: idWoOperasionalAktif });
-      wrap.innerHTML = !list.length ? '<div class="empty-state">Belum ada catatan pencucian.</div>' : list.map(w => `
-        <div class="sipandu-wo-card" style="cursor:default;">
-          <div class="sipandu-wo-card-top"><strong>${w.jumlahOmpreng} ompreng</strong><span>${escapeHtml(w.kondisi || '-')}</span></div>
-          <p>Diterima: ${escapeHtml(w.jamPengambilan || '-')} · Dikembalikan: ${escapeHtml(w.jamDikembalikan || 'belum')}</p>
-        </div>`).join('');
-    } catch (err) { wrap.innerHTML = ''; showError(err.message); }
-  }
-
-  document.getElementById('formTambahCuci').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await sipanduApiPost('addWashingRecord', {
-        token, idWo: idWoOperasionalAktif,
-        jumlahOmpreng: Number(document.getElementById('cuciJumlah').value || 0),
-        kondisi: document.getElementById('cuciKondisi').value
-      });
-      e.target.reset();
-      showSuccess('Penerimaan ompreng dicatat.');
-      muatCuci();
-    } catch (err) { showError(err.message); }
-  });
 });
