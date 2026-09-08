@@ -78,6 +78,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (err) {
     hideLoading();
+    // TAMPILKAN PESAN ERROR ASLI -- sebelumnya SEMUA kegagalan (apa pun
+    // penyebabnya: belum terdaftar di SIPANDU, Script Property belum
+    // diisi, sheet SIPANDU tidak ketemu, dll) ditampilkan sebagai
+    // "Akses Ditolak" generik yang sama, menyesatkan kalau penyebabnya
+    // sebenarnya bukan soal akses/pendaftaran.
+    document.getElementById('sipanduPesanErrorAsli').textContent = err.message || 'Terjadi kesalahan tidak diketahui.';
     el.ditolak.style.display = 'block';
     return;
   }
