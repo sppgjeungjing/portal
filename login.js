@@ -52,7 +52,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       showLoading('Memeriksa akun...');
-      const hasil = await apiPost('loginRelawan', { username, password });
+      // Login AMAN diulang otomatis (tidak ada efek ganda seperti submit
+      // data) -- kalau percobaan pertama timeout (mis. Apps Script baru
+      // "bangun" dari idle), coba sekali lagi otomatis sebelum benar-benar
+      // menyerah, supaya pengguna tidak perlu klik ulang manual.
+      let hasil;
+      try {
+        hasil = await apiPost('loginRelawan', { username, password });
+      } catch (errPertama) {
+        if (!/tidak merespons/i.test(errPertama.message)) throw errPertama;
+        showLoading('Koneksi lambat, mencoba sekali lagi...');
+        hasil = await apiPost('loginRelawan', { username, password }, undefined, 'Koneksi ke server lambat. Periksa internet Anda dan coba masuk lagi.');
+      }
       hideLoading();
 
       if (hasil.wajibGantiPassword) {

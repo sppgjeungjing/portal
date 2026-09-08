@@ -216,10 +216,18 @@
     el.loginError.textContent = '';
     showLoading('Memeriksa akun...');
     try {
-      const data = await apiPost('login', {
-        username: el.inputUsername.value.trim(),
-        password: el.inputPassword.value
-      });
+      const usernameInput = el.inputUsername.value.trim();
+      const passwordInput = el.inputPassword.value;
+      // Login AMAN diulang otomatis (lihat catatan sama di login.js) --
+      // 1x percobaan ulang kalau timeout, sebelum benar-benar menyerah.
+      let data;
+      try {
+        data = await apiPost('login', { username: usernameInput, password: passwordInput });
+      } catch (errPertama) {
+        if (!/tidak merespons/i.test(errPertama.message)) throw errPertama;
+        showLoading('Koneksi lambat, mencoba sekali lagi...');
+        data = await apiPost('login', { username: usernameInput, password: passwordInput }, undefined, 'Koneksi ke server lambat. Periksa internet Anda dan coba masuk lagi.');
+      }
       authToken = data.token;
       // BARU (modul Stok): expose token secara terbatas ke luar closure ini,
       // supaya admin-stok.js (file terpisah, tidak mengubah logic admin.js

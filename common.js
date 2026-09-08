@@ -155,7 +155,7 @@ async function apiGet(action, params, _attempt) {
  * @param {object} [payload] data yang dikirim
  * @param {number} [timeoutMs] override timeout default (mis. upload foto perlu lebih lama)
  */
-async function apiPost(action, payload, timeoutMs) {
+async function apiPost(action, payload, timeoutMs, pesanTimeoutKustom) {
   if (!action) throw new Error('API action belum ditentukan (kesalahan pada kode halaman).');
   if (!GOOGLE_APPS_SCRIPT_WEB_APP_URL || GOOGLE_APPS_SCRIPT_WEB_APP_URL === 'GOOGLE_APPS_SCRIPT_WEB_APP_URL') {
     throw new Error('Website belum terhubung ke server. Admin perlu mengisi config.js terlebih dahulu.');
@@ -175,7 +175,7 @@ async function apiPost(action, payload, timeoutMs) {
     }, timeoutMs);
   } catch (err) {
     logDebug_('ERROR', action, err.name);
-    if (err.name === 'AbortError') throw new Error('Server tidak merespons. Data mungkin belum tersimpan — periksa kembali sebelum mengulang.');
+    if (err.name === 'AbortError') throw new Error(pesanTimeoutKustom || 'Server tidak merespons. Data mungkin belum tersimpan — periksa kembali sebelum mengulang.');
     throw new Error('Data belum dapat dikirim. Silakan periksa koneksi internet dan coba kembali.');
   }
   const teksMentah = await res.text();

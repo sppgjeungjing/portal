@@ -275,30 +275,33 @@
    sedikit bergeser). Ditulis di akhir file supaya menang di cascade
    atas 3 aturan lama yang saling tumpang tindih (v1/v2.1/v2.2 di atas).
    ================================================================ */
-.shell-topbar { position: relative; }
-
-/* Trik "center absolut di halaman" HANYA untuk layar lebar (desktop) --
-   di layar sempit (HP), brand (2 logo + teks) yang lebar bisa MENIMPA
-   lonceng/avatar di kanan kalau tetap absolute. Di HP, biarkan brand
-   ikut alur flex normal (flex:1, center di RUANG SISA) -- kurang presisi
-   di tengah HALAMAN, tapi TIDAK PERNAH tabrakan dengan elemen lain,
-   yang jauh lebih penting daripada presisi visual semata. */
-@media (min-width: 640px) {
-  .shell-topbar-brand--portal {
-    position: absolute; left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-    flex: none; width: max-content;
-  }
+/* ================================================================
+   v2.4 — FIX FINAL YANG BENAR: CSS Grid 3-kolom, bukan flex+absolute.
+   Kenapa ini lebih baik dari v2.3 (di atas): dengan grid-template-columns
+   "1fr auto 1fr", kolom kiri (burger) dan kolom kanan (lonceng+avatar)
+   SAMA-SAMA dapat porsi 1fr yang SIMETRIS -- sehingga kolom tengah
+   (brand/logo+teks) otomatis PRESIS di tengah HALAMAN, TIDAK PEDULI
+   burger dan lonceng+avatar punya lebar yang beda. Beda dari
+   position:absolute (v2.3) yang precise tapi bisa menimpa elemen lain
+   di layar sempit -- grid TIDAK PERNAH overlap karena tiap kolom punya
+   ruang sendiri yang terpisah.
+   ================================================================ */
+.shell-topbar:has(.shell-topbar-brand--portal) {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
 }
-@media (max-width: 639px) {
-  .shell-topbar-brand--portal {
-    flex: 1; min-width: 0; justify-content: center;
-    overflow: hidden;
-  }
-  .shell-topbar-brand--portal .shell-topbar-logo-bgn,
-  .shell-topbar-brand--portal .shell-topbar-logo-sppg {
-    flex-shrink: 0;
-  }
+.shell-topbar:has(.shell-topbar-brand--portal) .shell-topbar-burger {
+  justify-self: start;
+}
+.shell-topbar-brand--portal {
+  position: static !important;
+  transform: none !important;
+  flex: none; width: max-content;
+  justify-self: center;
+}
+.shell-topbar:has(.shell-topbar-brand--portal) .shell-topbar-right {
+  justify-self: end;
 }
 
 .shell-topbar-brand--portal .shell-topbar-brand-text {
