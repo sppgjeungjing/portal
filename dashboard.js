@@ -44,6 +44,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const main = document.getElementById('dashboardMain');
 
+  // ---- MENU UTAMA: tombol "Lainnya" -- dipasang PALING AWAL, TIDAK
+  // bergantung pada berhasil/gagalnya pemuatan data Dashboard di bawah.
+  // (Sebelumnya listener ini ditaruh di akhir alur async yang panjang --
+  // kalau ada satu saja data yang gagal di tengah jalan, listener ini
+  // tidak pernah terpasang sama sekali, membuat tombol terlihat aktif
+  // tapi sebenarnya tidak bisa diklik.)
+  const btnLainnya = document.getElementById('btnMenuLainnya');
+  if (btnLainnya) {
+    btnLainnya.addEventListener('click', () => {
+      const burger = document.querySelector('.shell-topbar-burger');
+      if (burger) burger.click();
+    });
+  }
+
   try {
     showLoading('Memuat dashboard...');
     const d = await apiGet('getDashboardLengkapRelawan', { token: sesi.token });
@@ -147,12 +161,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('totalTerlambatPeriode').textContent = d.ringkasanKehadiran.terlambat;
     document.getElementById('totalIzinSakitPeriode').textContent = d.ringkasanKehadiran.izinSakit;
     document.getElementById('totalTidakHadirPeriode').textContent = d.ringkasanKehadiran.tidakHadir;
-
-    // ---- MENU UTAMA: tombol "Lainnya" buka sidebar yang sudah ada ----
-    document.getElementById('btnMenuLainnya').addEventListener('click', () => {
-      const burger = document.querySelector('.shell-topbar-burger');
-      if (burger) burger.click();
-    });
 
     // ---- INFORMASI PENTING ----
     const infoWrap = document.getElementById('infoPentingList');

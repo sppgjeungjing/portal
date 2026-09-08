@@ -39,8 +39,9 @@
     <a href="dashboard.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></span><span>Dashboard</span></a>
     <a href="profil.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></span><span>Profil Saya</span></a>
     <p class="shell-nav-group-title">SIPRES</p>
-    <a href="absensi.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M9 12l2 2 4-4"/></svg></span><span>Absensi Masuk / Pulang</span></a>
-    <a href="riwayat.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><span>Riwayat Absensi</span></a>
+    <a href="absensi.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M9 12l2 2 4-4"/></svg></span><span>Presensi Kehadiran</span></a>
+    <a href="riwayat.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><span>Riwayat Presensi</span></a>
+    <a href="absensi.html?izin=1" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M12 9v6"/><circle cx="12" cy="12" r="9"/></svg></span><span>Pengajuan Izin / Sakit</span></a>
     <p class="shell-nav-group-title">Operasional</p>
     <a href="sipandu.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h4"/></svg></span><span>SIPANDU</span></a>
     <a href="stok-relawan.html" class="shell-nav-link active"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span><span>SIRAGA</span></a>
@@ -61,11 +62,12 @@
     <div class="shell-main">
   <header class="shell-topbar">
     <button type="button" class="shell-topbar-burger" aria-label="Buka menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
-    <div class="shell-topbar-brand">
-      <img src="assets/logo.png" alt="Logo SPPG Jeungjing">
+    <div class="shell-topbar-brand shell-topbar-brand--portal">
+      <img src="assets/logo-bgn.png" alt="Logo Badan Gizi Nasional" class="shell-topbar-logo-bgn">
+      <img src="assets/logo.png" alt="Logo SPPG Jeungjing" class="shell-topbar-logo-sppg">
       <div class="shell-topbar-brand-text">
+        <span class="shell-topbar-brand-label">PORTAL</span>
         <strong>SPPG JEUNGJING</strong>
-        <span>PORTAL SPPG JEUNGJING</span>
       </div>
     </div>
     <div class="shell-topbar-right">
@@ -73,7 +75,7 @@
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 21h4"/></svg>
         <span class="shell-topbar-bell-count is-hidden" id="topbarBellCount">0</span>
       </a>
-      <div class="shell-topbar-avatar" id="topbarAvatar">–</div>
+      <a href="profil.html" class="shell-topbar-avatar" id="topbarAvatar" aria-label="Profil Saya">–</a>
     </div>
   </header>
       <main class="shell-content">

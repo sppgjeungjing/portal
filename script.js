@@ -88,6 +88,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   el.btnTutupSukses.addEventListener('click', tutupOverlaySukses);
   el.btnPilihIzin.addEventListener('click', () => pilihJenisIzin('Izin'));
   el.btnPilihSakit.addEventListener('click', () => pilihJenisIzin('Sakit'));
+
+  // Menu sidebar "Pengajuan Izin / Sakit" mengarah ke absensi.html?izin=1
+  // -- begitu halaman dimuat, langsung buka panel Izin/Sakit otomatis,
+  // supaya terasa seperti menu tersendiri walau sebenarnya bagian dari
+  // halaman Absensi yang sama (tidak menduplikasi fitur yang sudah ada).
+  if (new URLSearchParams(window.location.search).get('izin') === '1') {
+    bukaPanelIzin();
+  }
   el.inputKeteranganIzin.addEventListener('input', perbaruiTombolIzin);
   el.btnKirimIzin.addEventListener('click', kirimIzinSakit);
 
