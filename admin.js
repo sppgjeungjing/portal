@@ -303,7 +303,8 @@
     { key: 'jadwalList', label: 'Jadwal & Penugasan', fn: () => apiGet('getJadwalListAdmin', { token: authToken }) },
     { key: 'dokumenList', label: 'Dokumen', fn: () => apiGet('getDokumenListAdmin', { token: authToken }) },
     { key: 'notifikasiList', label: 'Notifikasi', fn: () => apiGet('getNotifikasiListAdmin', { token: authToken }) },
-    { key: 'pengumumanList', label: 'Pengumuman', fn: () => apiGet('getPengumumanListAdmin', { token: authToken }) }
+    { key: 'pengumumanList', label: 'Pengumuman', fn: () => apiGet('getPengumumanListAdmin', { token: authToken }) },
+    { key: 'dashboardPengelola', label: 'Ringkasan Dashboard', fn: () => apiGet('getDashboardPengelola', { token: authToken }) }
   ];
   const RENDER_UNTUK_KEY = {
     relawanList: () => { renderRelawanTable(); renderOverview(); },
@@ -316,7 +317,8 @@
     jadwalList: () => { fillRelawanJadwalSelect(); renderJadwalTable(); },
     dokumenList: renderDokumenAdmin,
     notifikasiList: () => { renderNotifikasiAdmin(); renderOverview(); },
-    pengumumanList: renderPengumumanAdmin
+    pengumumanList: renderPengumumanAdmin,
+    dashboardPengelola: renderOverview
   };
 
   /** Muat ulang SATU sumber data saja (dipanggil dari tombol "Coba Lagi" di empty-state error). */
@@ -1417,13 +1419,11 @@
   }
 
   function renderOverview() {
-    if (!el.ovTotalRelawan) return;
+    if (!el.ovAktivitasList) return; // guard pakai elemen yang MASIH ADA (bukan yang sudah dihapus dari HTML)
     const relawanGagal = cache.errors.relawanList;
     const akunGagal = cache.errors.akunList;
     const gagalTanda = '—'; // beda dari "0" — supaya tidak terbaca sebagai "memang nol"
 
-    const totalRelawan = cache.relawanList.length;
-    const relawanAktif = cache.relawanList.filter(r => (r.status || 'AKTIF') === 'AKTIF').length;
     const akunById = {};
     cache.akunList.forEach(a => { akunById[a.idRelawan] = a; });
     let belumAkun = 0, akunAktif = 0, akunNonaktif = 0;
@@ -1434,21 +1434,9 @@
       else akunNonaktif++;
     });
 
-    el.ovTotalRelawan.textContent = relawanGagal ? gagalTanda : totalRelawan;
-    el.ovRelawanAktif.textContent = relawanGagal ? gagalTanda : relawanAktif;
-    el.ovAkunAktif.textContent = (relawanGagal || akunGagal) ? gagalTanda : akunAktif;
     el.ovBelumAkun.textContent = (relawanGagal || akunGagal) ? gagalTanda : belumAkun;
     el.ovAkunAktif2.textContent = (relawanGagal || akunGagal) ? gagalTanda : akunAktif;
     el.ovAkunNonaktif.textContent = (relawanGagal || akunGagal) ? gagalTanda : akunNonaktif;
-
-    // "Notifikasi Baru" = notifikasi yang tercatat dalam 3 hari terakhir (data aktual, bukan statis).
-    const batasWaktu = new Date();
-    batasWaktu.setDate(batasWaktu.getDate() - 3);
-    const notifBaru = cache.notifikasiList.filter(n => {
-      const d = new Date(n.tanggal);
-      return !isNaN(d.getTime()) && d >= batasWaktu;
-    });
-    el.ovNotifikasiBaru.textContent = cache.errors.notifikasiList ? gagalTanda : notifBaru.length;
 
     const aktivitas = cache.notifikasiList.slice(0, 6);
     if (!aktivitas.length) {
@@ -1462,6 +1450,78 @@
             <p class="activity-desc">${escapeHtml(n.isi)}</p>
             <p class="activity-time">${escapeHtml(formatTanggalWaktuIndoShell(n.tanggal))}</p>
           </span>
+        </div>`).join('');
+    }
+
+    // ===== RINGKASAN DASHBOARD PENGELOLA (BARU) =====
+    const d = cache.dashboardPengelola;
+    const dGagal = cache.errors.dashboardPengelola;
+    if (!d) return; // belum selesai dimuat -- tampilan default "–" tetap terlihat sampai data datang
+
+    // -- Kehadiran Hari Ini --
+    document.getElementById('ovTotalRelawanHariIni').textContent = dGagal ? gagalTanda : d.kehadiran.totalRelawan;
+    document.getElementById('ovSudahMasuk').textContent = dGagal ? gagalTanda : d.kehadiran.sudahMasuk;
+    document.getElementById('ovBelumMasuk').textContent = dGagal ? gagalTanda : d.kehadiran.belumMasuk;
+    document.getElementById('ovSudahPulang').textContent = dGagal ? gagalTanda : d.kehadiran.sudahPulang;
+    document.getElementById('ovBelumPulang').textContent = dGagal ? gagalTanda : d.kehadiran.belumPulang;
+    document.getElementById('ovIzinSakitCuti').textContent = dGagal ? gagalTanda : d.kehadiran.izinSakitCuti;
+
+    const kotakAksi = document.getElementById('ovKehadiranAksi');
+    if (!dGagal && d.kehadiran.belumMasuk > 0) {
+      kotakAksi.style.display = 'flex';
+      document.getElementById('ovKehadiranAksiTeks').textContent = d.kehadiran.belumMasuk + ' Relawan Belum Absen Masuk';
+    } else {
+      kotakAksi.style.display = 'none';
+    }
+
+    // -- Jadwal & Penugasan Hari Ini --
+    const jadwalEl = document.getElementById('ovJadwalStatus');
+    const jadwalTeksEl = document.getElementById('ovJadwalTeks');
+    if (dGagal) {
+      jadwalTeksEl.textContent = gagalTanda;
+      jadwalEl.style.background = '#f3f4f6';
+    } else if (d.jadwal.sudahDiatur) {
+      jadwalTeksEl.textContent = '✓ Jadwal & Penugasan hari ini sudah diatur (' + d.jadwal.jumlahShiftDivisi + ' Shift Divisi, ' + d.jadwal.jumlahPenugasanKhusus + ' Penugasan Khusus).';
+      jadwalEl.style.background = '#e8f5e9'; jadwalTeksEl.style.color = '#1a7a4c';
+    } else {
+      jadwalTeksEl.textContent = 'Jadwal & Penugasan Hari Ini Belum Lengkap';
+      jadwalEl.style.background = '#fff4e5'; jadwalTeksEl.style.color = '#8a5a12';
+    }
+
+    // -- SIRAGA — Persediaan --
+    document.getElementById('ovStokTotal').textContent = dGagal ? gagalTanda : d.siraga.totalBarang;
+    document.getElementById('ovStokAman').textContent = dGagal ? gagalTanda : d.siraga.aman;
+    document.getElementById('ovStokMenipis').textContent = dGagal ? gagalTanda : d.siraga.menipis;
+    document.getElementById('ovStokKritis').textContent = dGagal ? gagalTanda : d.siraga.kritis;
+
+    // -- SIPANDU --
+    const sipanduTeks = document.getElementById('ovSipanduRingkasan');
+    if (dGagal) {
+      sipanduTeks.textContent = gagalTanda;
+    } else if (!d.sipandu.adaData) {
+      sipanduTeks.textContent = 'Belum ada data Work Order di SIPANDU.';
+    } else {
+      sipanduTeks.textContent = d.sipandu.woHariIni + ' Work Order hari ini' + (d.sipandu.perluValidasi > 0 ? ', ' + d.sipandu.perluValidasi + ' menunggu validasi.' : '.');
+    }
+
+    // -- 🔴 PERLU TINDAKAN (dihitung dari data di atas, tidak perlu request tambahan) --
+    const tindakan = [];
+    if (!dGagal) {
+      if (d.kehadiran.belumMasuk > 0) tindakan.push({ teks: d.kehadiran.belumMasuk + ' relawan belum absen masuk', aksi: 'Kirim Notifikasi', panel: 'panelNotifikasiAdmin' });
+      if (!d.jadwal.sudahDiatur) tindakan.push({ teks: 'Jadwal & Penugasan hari ini belum diatur', aksi: 'Atur Jadwal', panel: 'panelShift' });
+      if (d.siraga.kritis > 0) tindakan.push({ teks: d.siraga.kritis + ' barang stok kritis', aksi: 'Lihat Stok', panel: 'panelStok' });
+      if (d.sipandu.perluValidasi > 0) tindakan.push({ teks: d.sipandu.perluValidasi + ' Work Order SIPANDU menunggu validasi', aksi: null, panel: null });
+    }
+    const wadahTindakan = document.getElementById('ovPerluTindakan');
+    if (dGagal) {
+      wadahTindakan.innerHTML = '<div class="profile-identity-row"><span>' + gagalTanda + '</span><span></span></div>';
+    } else if (!tindakan.length) {
+      wadahTindakan.innerHTML = '<div class="profile-identity-row"><span>✓ Tidak ada hal yang perlu ditindaklanjuti saat ini.</span><span></span></div>';
+    } else {
+      wadahTindakan.innerHTML = tindakan.map(x => `
+        <div class="profile-identity-row">
+          <span>${escapeHtml(x.teks)}</span>
+          ${x.panel ? `<button type="button" class="btn-mini" onclick="document.querySelector('[data-panel=${x.panel}]').click()">${escapeHtml(x.aksi)}</button>` : '<span></span>'}
         </div>`).join('');
     }
   }
@@ -1649,10 +1709,12 @@
 // Tidak mengubah mekanisme SIPANDU/Relawan yang sudah ada sama sekali.
 // ============================================================
 (function () {
-  const btn = document.getElementById('btnBukaSipandu');
-  if (!btn) return;
+  // Sekarang ada 2 tombol yang trigger alur sama: yang di sidebar (lama)
+  // dan yang baru di Dashboard Pengelola ("Lihat SIPANDU").
+  const tombolSemua = [document.getElementById('btnBukaSipandu'), document.getElementById('btnBukaSipanduOverview')].filter(Boolean);
+  if (!tombolSemua.length) return;
 
-  btn.addEventListener('click', async () => {
+  async function bukaSipandu() {
     if (!window.sppgAdminToken) { showError('Sesi Admin tidak ditemukan. Silakan login ulang.'); return; }
     try {
       showLoading('Menyiapkan akses SIPANDU...');
@@ -1668,5 +1730,7 @@
       hideLoading();
       showError(err.message);
     }
-  });
+  }
+
+  tombolSemua.forEach(btn => btn.addEventListener('click', bukaSipandu));
 })();

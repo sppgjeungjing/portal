@@ -384,3 +384,4 @@
 .admin-stat-card.accent-success .admin-stat-value { color: var(--color-success); }
 .admin-stat-card.accent-info .admin-stat-value { color: var(--color-info); }
 .admin-stat-card.accent-warning .admin-stat-value { color: var(--color-warning); }
+.admin-stat-card.accent-danger .admin-stat-value { color: var(--color-danger); }
