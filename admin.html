@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Portal Pengelola — SPPG Jeungjing</title>
 <link rel="icon" href="assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -84,6 +84,7 @@
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelAkun"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></span><span>Akun Relawan</span></button>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelDivisi"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span><span>Kelola Divisi</span></button>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelRoleAkses"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7l7-4z"/></svg></span><span>Role ASN &amp; Kepala SPPG</span></button>
+      <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelPengelolaSppg"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3.2"/><circle cx="17" cy="7" r="2.6"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M14.5 14.7c2.6.4 4.5 2.3 4.5 5.3"/></svg></span><span>Pengelola SPPG</span></button>
 
       <p class="shell-nav-group-title">SIPRES</p>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelHarian"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M9 12l2 2 4-4"/></svg></span><span>Rekap Harian</span></button>
@@ -109,6 +110,9 @@
 
       <p class="shell-nav-group-title">SIPANDU</p>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelHakAksesSipandu"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h4"/></svg></span><span>SIPANDU</span></button>
+
+      <p class="shell-nav-group-title">Website Publik</p>
+      <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelWebsitePublik"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18"/><path d="M12 3a15 15 0 0 0 0 18"/></svg></span><span>Kelola Website Publik</span></button>
 
       <p class="shell-nav-group-title">Pengaturan</p>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelPengaturan"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg></span><span>Pengaturan</span></button>
@@ -157,20 +161,14 @@
     <section class="panel-block" style="margin-bottom:16px;">
       <p class="panel-block-title">🔴 Kehadiran Relawan Hari Ini</p>
       <div class="admin-stat-grid" id="ovKehadiranGrid">
-        <div class="admin-stat-card"><div class="admin-stat-value" id="ovTotalRelawanHariIni">–</div><div class="admin-stat-label">Total Relawan</div></div>
+        <div class="admin-stat-card accent-warning"><div class="admin-stat-value" id="ovTerlambat">–</div><div class="admin-stat-label">Terlambat</div></div>
         <div class="admin-stat-card accent-success"><div class="admin-stat-value" id="ovSudahMasuk">–</div><div class="admin-stat-label">Sudah Absen Masuk</div></div>
-        <div class="admin-stat-card accent-warning"><div class="admin-stat-value" id="ovBelumMasuk">–</div><div class="admin-stat-label">Belum Absen Masuk</div></div>
         <div class="admin-stat-card accent-info"><div class="admin-stat-value" id="ovSudahPulang">–</div><div class="admin-stat-label">Sudah Absen Pulang</div></div>
+        <div class="admin-stat-card accent-danger"><div class="admin-stat-value" id="ovBelumMasuk">–</div><div class="admin-stat-label">Belum Absen Masuk</div></div>
         <div class="admin-stat-card"><div class="admin-stat-value" id="ovBelumPulang">–</div><div class="admin-stat-label">Belum Absen Pulang</div></div>
-        <div class="admin-stat-card"><div class="admin-stat-value" id="ovIzinSakitCuti">–</div><div class="admin-stat-label">Izin / Sakit / Cuti</div></div>
+        <div class="admin-stat-card accent-danger"><div class="admin-stat-value" id="ovBelumAbsen">–</div><div class="admin-stat-label">Belum Absen</div></div>
       </div>
-      <div id="ovKehadiranAksi" style="display:none;margin-top:10px;padding:10px 14px;background:#fff4e5;border-radius:10px;font-size:13px;color:#8a5a12;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <span id="ovKehadiranAksiTeks"></span>
-        <span style="display:flex;gap:8px;">
-          <button type="button" class="btn-mini" onclick="document.querySelector('[data-panel=panelHarian]').click()">Lihat Relawan</button>
-          <button type="button" class="btn-mini primary" onclick="document.querySelector('[data-panel=panelNotifikasiAdmin]').click()">Kirim Notifikasi</button>
-        </span>
-      </div>
+      <div id="ovKehadiranAksiWrap" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
     </section>
 
     <!-- 🟠 JADWAL & PENUGASAN HARI INI -->
@@ -180,6 +178,19 @@
         <span id="ovJadwalTeks">Memuat...</span>
         <button type="button" class="btn-mini primary" onclick="document.querySelector('[data-panel=panelShift]').click()">Atur Jadwal &amp; Penugasan</button>
       </div>
+    </section>
+
+    <!-- 🗓️ KALENDER OPERASIONAL — judul = nama Periode Aktif -->
+    <section class="panel-block" style="margin-bottom:16px;">
+      <p class="panel-block-title" id="ovKalenderJudul">🗓️ Kalender Operasional</p>
+      <div id="ovKalenderIsi">Memuat...</div>
+    </section>
+
+    <!-- 📊 REKAP 2 MINGGU — otomatis Sementara/Selesai -->
+    <section class="panel-block" style="margin-bottom:16px;">
+      <p class="panel-block-title" id="ovRekapJudul">📊 Rekap 2 Minggu</p>
+      <div id="ovRekapIsi">Memuat...</div>
+      <button type="button" class="btn-mini" style="margin-top:10px;" onclick="document.querySelector('[data-panel=panelDuaMinggu]').click()">Lihat Rekap Lengkap</button>
     </section>
 
     <!-- 🟡 SIRAGA — PERSEDIAAN -->
@@ -813,24 +824,68 @@
   </div>
 
   <!-- DOKUMEN -->
+  <div class="admin-panel" id="panelPengelolaSppg">
+    <div><h1 style="font-size:18px;margin:0;color:var(--color-navy);">Pengelola SPPG</h1><p style="font-size:13px;margin:2px 0 0;color:var(--color-text-muted);">Kelola lebih dari satu akun Pengelola/Admin Portal.</p></div>
+    <div class="inline-form" style="margin-top:14px;flex-wrap:wrap;">
+      <input type="text" id="inputUsernamePengelola" placeholder="Username baru">
+      <input type="text" id="inputNamaPengelola" placeholder="Nama">
+      <input type="password" id="inputPasswordPengelola" placeholder="Password (min. 6 karakter)">
+      <button type="button" class="btn-mini primary" id="btnTambahPengelola">+ Tambah Pengelola</button>
+    </div>
+    <div class="table-wrap" style="margin-top:14px;">
+      <table>
+        <thead><tr><th>Username</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead>
+        <tbody id="tbodyPengelolaSppg"><tr><td colspan="4"><div class="empty-state">Memuat data...</div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="admin-panel" id="panelHakAksesSipandu">
     <div><h1 style="font-size:18px;margin:0;color:var(--color-navy);">SIPANDU</h1><p style="font-size:13px;margin:2px 0 0;color:var(--color-text-muted);">Sistem Informasi Pengelolaan Data &amp; Operasional SPPG.</p></div>
 
-    <button type="button" class="btn-submit" id="btnBukaSipandu" style="width:100%;margin:16px 0;">📋 Buka SIPANDU</button>
-
-    <p class="section-title">Hak Akses SIPANDU</p>
-    <p style="font-size:12.5px;color:var(--color-text-muted);margin:-6px 0 12px;">Berikan/cabut akses SIPANDU untuk relawan — dikelola dari sini, tidak perlu edit Spreadsheet SIPANDU secara manual.</p>
-    <p style="font-size:12.5px;color:var(--color-text-muted);margin:12px 0;">Relawan yang diberi akses di sini bisa masuk SIPANDU sesuai role yang dipilih. Kalau relawan belum pernah terdaftar sama sekali, baris baru otomatis dibuat di sheet USERS SIPANDU.</p>
-    <div class="inline-form">
-      <select id="selectRelawanAksesSipandu"><option value="">Pilih relawan...</option></select>
-      <select id="selectRoleSipandu"><option value="">Pilih role...</option></select>
-      <button type="button" class="btn-mini primary" id="btnTambahAksesSipandu">+ Berikan Akses</button>
+    <div class="chip-tabs" id="sipanduAdminTabs" style="margin-top:14px;">
+      <button type="button" class="chip-tab active" data-sipandu-sub="dashboard">Dashboard</button>
+      <button type="button" class="chip-tab" data-sipandu-sub="wo">Work Order</button>
+      <button type="button" class="chip-tab" data-sipandu-sub="hakakses">Hak Akses</button>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Nama</th><th>Role SIPANDU</th><th>Status</th><th>Aksi</th></tr></thead>
-        <tbody id="tbodyHakAksesSipandu"><tr><td colspan="4"><div class="empty-state">Memuat data...</div></td></tr></tbody>
-      </table>
+
+    <!-- SUB: DASHBOARD -->
+    <div id="sipanduSubDashboard">
+      <div class="admin-stat-grid" id="sipanduOvGrid">
+        <div class="admin-stat-card"><div class="admin-stat-value" id="sipOvWoHariIni">–</div><div class="admin-stat-label">WO Hari Ini</div></div>
+        <div class="admin-stat-card"><div class="admin-stat-value" id="sipOvPorsiHariIni">–</div><div class="admin-stat-label">Total Porsi Hari Ini</div></div>
+        <div class="admin-stat-card accent-success"><div class="admin-stat-value" id="sipOvReady">–</div><div class="admin-stat-label">WO Ready</div></div>
+        <div class="admin-stat-card accent-info"><div class="admin-stat-value" id="sipOvPopFilled">–</div><div class="admin-stat-label">POP Terisi</div></div>
+        <div class="admin-stat-card accent-success"><div class="admin-stat-value" id="sipOvCompleted">–</div><div class="admin-stat-label">Selesai</div></div>
+        <div class="admin-stat-card"><div class="admin-stat-value" id="sipOvOperasionalBerjalan">–</div><div class="admin-stat-label">Operasional Berjalan</div></div>
+      </div>
+    </div>
+
+    <!-- SUB: WORK ORDER -->
+    <div id="sipanduSubWo" style="display:none;">
+      <div class="table-wrap" style="margin-top:14px;">
+        <table>
+          <thead><tr><th>Nomor WO</th><th>Tanggal</th><th>Menu</th><th>Porsi</th><th>Status</th></tr></thead>
+          <tbody id="tbodySipanduWo"><tr><td colspan="5"><div class="empty-state">Memuat data...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SUB: HAK AKSES -->
+    <div id="sipanduSubHakAkses" style="display:none;">
+      <p style="font-size:12.5px;color:var(--color-text-muted);margin:14px 0 4px;">Berikan/cabut akses SIPANDU untuk relawan — dikelola dari sini, tidak perlu edit Spreadsheet SIPANDU secara manual.</p>
+      <p style="font-size:12.5px;color:var(--color-text-muted);margin:0 0 12px;">Relawan yang diberi akses di sini bisa masuk bagian SIPANDU sesuai role yang dipilih.</p>
+      <div class="inline-form">
+        <select id="selectRelawanAksesSipandu"><option value="">Pilih relawan...</option></select>
+        <select id="selectRoleSipandu"><option value="">Pilih role...</option></select>
+        <button type="button" class="btn-mini primary" id="btnTambahAksesSipandu">+ Berikan Akses</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nama</th><th>Role SIPANDU</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="tbodyHakAksesSipandu"><tr><td colspan="4"><div class="empty-state">Memuat data...</div></td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -923,24 +978,85 @@
   </div>
 
   <!-- PENGATURAN -->
+  <div class="admin-panel" id="panelWebsitePublik">
+    <div><h1 style="font-size:18px;margin:0;color:var(--color-navy);">Kelola Website Publik</h1><p style="font-size:13px;margin:2px 0 0;color:var(--color-text-muted);">Isi &amp; perbarui konten Website Publik SPPG Jeungjing dari sini.</p></div>
+    <div id="wpuDaftarHalaman" style="margin-top:14px;">Memuat...</div>
+  </div>
+
   <div class="admin-panel" id="panelPengaturan">
-    <p class="section-title">Pengaturan Portal</p>
-    <div class="panel-block" style="margin-bottom:14px;">
-      <p style="font-size:13px;color:var(--color-navy);font-weight:700;margin:0 0 4px;">Identitas Portal</p>
-      <p style="font-size:12.5px;color:var(--color-text-muted);margin:0;line-height:1.6;">PORTAL SPPG JEUNGJING &middot; Badan Gizi Nasional.<br>Kp. Kecok, RT.004, Ds. Jeungjing, Kec. Cisoka, Kab. Tangerang - Banten, 15730.</p>
-    </div>
-    <div class="panel-block" style="margin-bottom:14px;">
-      <p style="font-size:13px;color:var(--color-navy);font-weight:700;margin:0 0 4px;">Pengaturan Akun Admin</p>
-      <p style="font-size:12.5px;color:var(--color-text-muted);margin:0;">Ganti password Admin tersedia lewat <strong>Lupa Password</strong> pada halaman login (kode reset dari developer/pengelola sistem).</p>
-    </div>
-    <div class="panel-block" style="margin-bottom:14px;">
-      <p style="font-size:13px;color:var(--color-navy);font-weight:700;margin:0 0 4px;">Pengaturan Notifikasi</p>
-      <p style="font-size:12.5px;color:var(--color-text-muted);margin:0;">Notifikasi relawan tercatat otomatis dari Informasi &amp; Jadwal, dan bisa dikirim manual lewat menu Notifikasi.</p>
-    </div>
-    <div class="panel-block">
-      <p style="font-size:13px;color:var(--color-navy);font-weight:700;margin:0 0 4px;">Pengaturan Modul</p>
-      <p style="font-size:12.5px;color:var(--color-text-muted);margin:0;">Seluruh modul Portal (Absensi, Jadwal, Informasi, Dokumen, Notifikasi, Pengumuman, Laporan) sudah tersedia sejak tahap ini.</p>
-    </div>
+    <div><h1 style="font-size:18px;margin:0;color:var(--color-navy);">Pengaturan</h1><p style="font-size:13px;margin:2px 0 0;color:var(--color-text-muted);">6 kategori — klik untuk buka.</p></div>
+
+    <!-- 1. PENGATURAN PORTAL -->
+    <details class="panel-block" style="margin:14px 0;" open>
+      <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">1. Pengaturan Portal</summary>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;max-width:420px;">
+        <label style="font-size:12.5px;font-weight:600;color:var(--color-text-muted);">Nama Portal
+          <input type="text" id="inputNamaPortal" style="display:block;width:100%;margin-top:4px;">
+        </label>
+        <p style="font-size:12px;color:var(--color-text-muted);margin:0;">Logo BGN, Logo SPPG, dan Foto Gedung diatur lewat file di folder <code>assets/</code> pada GitHub — belum bisa diubah dari sini.</p>
+        <button type="button" class="btn-mini primary" id="btnSimpanPortal" style="align-self:flex-start;">Simpan</button>
+      </div>
+    </details>
+
+    <!-- 2. PENGATURAN PRESENSI -->
+    <details class="panel-block" style="margin:14px 0;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">2. Pengaturan Presensi</summary>
+      <div style="margin-top:12px;">
+        <p style="font-size:13px;color:var(--color-text-muted);margin:0 0 10px;">Radius presensi &amp; titik lokasi diatur di <strong>Master Lokasi SPPG</strong> (SIKOP) — supaya tidak ada 2 tempat pengaturan lokasi yang berbeda.</p>
+        <button type="button" class="btn-mini" onclick="document.querySelector('[data-panel=panelLokasi]').click()">Buka Master Lokasi SPPG</button>
+      </div>
+    </details>
+
+    <!-- 3. PENGATURAN NOTIFIKASI -->
+    <details class="panel-block" style="margin:14px 0;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">3. Pengaturan Notifikasi</summary>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;max-width:420px;">
+        <label style="font-size:12.5px;font-weight:600;color:var(--color-text-muted);">Template Pesan Default
+          <textarea id="inputTemplateNotif" rows="3" style="display:block;width:100%;margin-top:4px;font-family:inherit;padding:8px 10px;border-radius:8px;border:1.5px solid var(--color-border);"></textarea>
+        </label>
+        <p style="font-size:12px;color:var(--color-text-muted);margin:0;">Target penerima (Semua/Divisi/Individu) diatur langsung saat membuat Notifikasi/Informasi/Pengumuman di menu SIPIKA.</p>
+        <button type="button" class="btn-mini primary" id="btnSimpanNotif" style="align-self:flex-start;">Simpan</button>
+      </div>
+    </details>
+
+    <!-- 4. PENGATURAN AKUN & AKSES -->
+    <details class="panel-block" style="margin:14px 0;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">4. Pengaturan Akun &amp; Akses</summary>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;">
+        <button type="button" class="btn-mini" onclick="document.querySelector('[data-panel=panelPengelolaSppg]').click()">Akun Pengelola</button>
+        <button type="button" class="btn-mini" onclick="document.querySelector('[data-panel=panelAkun]').click()">Akun Relawan</button>
+        <button type="button" class="btn-mini" onclick="document.querySelector('[data-panel=panelRoleAkses]').click()">Role ASN &amp; Kepala SPPG</button>
+        <button type="button" class="btn-mini" onclick="document.querySelector('[data-panel=panelHakAksesSipandu]').click()">Hak Akses SIPANDU</button>
+      </div>
+    </details>
+
+    <!-- 5. PENGATURAN SISTEM -->
+    <details class="panel-block" style="margin:14px 0;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">5. Pengaturan Sistem</summary>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;max-width:420px;">
+        <label style="font-size:12.5px;font-weight:600;color:var(--color-text-muted);">Zona Waktu
+          <select id="inputTimezone" style="display:block;width:100%;margin-top:4px;">
+            <option value="Asia/Jakarta">Asia/Jakarta (WIB)</option>
+            <option value="Asia/Makassar">Asia/Makassar (WITA)</option>
+            <option value="Asia/Jayapura">Asia/Jayapura (WIT)</option>
+          </select>
+        </label>
+        <button type="button" class="btn-mini primary" id="btnSimpanSistem" style="align-self:flex-start;">Simpan</button>
+      </div>
+    </details>
+
+    <!-- 6. PENGATURAN KEAMANAN -->
+    <details class="panel-block" style="margin:14px 0;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">6. Pengaturan Keamanan — Log Aktivitas</summary>
+      <div style="margin-top:12px;">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Waktu</th><th>Pengguna</th><th>Aktivitas</th><th>Modul</th></tr></thead>
+            <tbody id="tbodyLogAktivitas"><tr><td colspan="4"><div class="empty-state">Klik untuk memuat...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
   </div>
       </main>
       <footer class="shell-footer">
@@ -972,6 +1088,9 @@
 <script src="admin-import.js"></script>
 <script src="admin-target-widget.js"></script>
 <script src="admin-sipandu-akses.js"></script>
+<script src="admin-pengelola-sppg.js"></script>
+<script src="admin-pengaturan.js"></script>
+<script src="admin-website-publik.js"></script>
 <script>document.addEventListener('DOMContentLoaded', function () { initShell({ storageKey: 'sppgSidebarCollapsedAdmin' }); });</script>
 </body>
 </html>

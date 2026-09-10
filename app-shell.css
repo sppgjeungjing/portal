@@ -27,9 +27,10 @@
 
 .shell-topbar {
   position: sticky; top: 0; z-index: 40;
-  height: var(--shell-topbar-h);
+  height: calc(var(--shell-topbar-h) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   display: flex; align-items: center; gap: 12px;
-  padding: 0 14px;
+  padding-left: 14px; padding-right: 14px;
   background: linear-gradient(140deg, var(--color-navy) 0%, var(--color-navy-deep) 100%);
   color: #fff;
   box-shadow: 0 2px 12px rgba(10, 29, 51, 0.18);

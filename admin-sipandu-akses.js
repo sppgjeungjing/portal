@@ -77,16 +77,13 @@
       if (!panel) return;
 
       let sudahDimuat = false;
-      const btnTab = document.querySelector('[data-panel="panelHakAksesSipandu"]');
-      if (btnTab) {
-        btnTab.addEventListener('click', () => {
-          if (sudahDimuat) return;
-          sudahDimuat = true;
-          muatDaftarRelawan_();
-          muatDaftarRole_();
-          muatTabelHakAkses_();
-        });
-      }
+      window.addEventListener('sipandu-hakakses-dibuka', () => {
+        if (sudahDimuat) return;
+        sudahDimuat = true;
+        muatDaftarRelawan_();
+        muatDaftarRole_();
+        muatTabelHakAkses_();
+      });
 
       document.getElementById('btnTambahAksesSipandu').addEventListener('click', async () => {
         const selRelawan = document.getElementById('selectRelawanAksesSipandu');

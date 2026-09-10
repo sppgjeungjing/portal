@@ -117,9 +117,18 @@ a { color: inherit; }
 .pub-btn-outline { background: transparent; color: var(--pub-navy); border: 1.5px solid var(--pub-navy); }
 .pub-hero-art {
   position: absolute; right: -8%; top: 50%; transform: translateY(-50%); width: 52%;
-  border-radius: 18px; overflow: hidden; box-shadow: 0 20px 50px rgba(15,40,71,.18);
+  overflow: hidden;
 }
-.pub-hero-art img { width: 100%; }
+.pub-hero-art::before {
+  content: ''; position: absolute; inset: 0; z-index: 1;
+  /* Gradasi di 3 sisi (kiri, atas, bawah) supaya gambar melebur ke
+     warna latar Hero, bukan tampil sebagai kartu terpisah dengan
+     batas tegas seperti sebelumnya (border-radius + shadow). */
+  background:
+    linear-gradient(90deg, var(--pub-cream) 0%, rgba(250,246,237,0) 22%),
+    linear-gradient(180deg, var(--pub-cream) 0%, rgba(250,246,237,0) 18%, rgba(250,246,237,0) 82%, var(--pub-cream-soft) 100%);
+}
+.pub-hero-art img { width: 100%; display: block; }
 
 /* ---- SECTION GENERIC ---- */
 .pub-section { padding: 56px 0; }

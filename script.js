@@ -327,9 +327,14 @@ function evaluasiZona() {
 
   const badge = document.createElement('span');
   badge.className = 'absensi-zone-badge ' + (zonaValid ? 'ok' : 'bad');
+  // Teks disederhanakan -- cukup tampilkan jarak aktual, tanpa label
+  // "Disetujui/Di Luar Zona" eksplisit (sistem radius yang menentukan
+  // lewat pemblokiran tombol kirim, warna hijau/merah tetap jadi
+  // indikator visualnya). Logic zonaValid/pemblokiran SAMA SEKALI
+  // tidak diubah -- cuma teks tampilannya.
   badge.textContent = zonaValid
-    ? `✓ Dalam Zona Disetujui — ${Math.round(jarak)} meter dari ${lokasiSppg.nama}`
-    : `⚠️ Di Luar Zona Absensi — ${Math.round(jarak)} meter dari ${lokasiSppg.nama} (maks ${lokasiSppg.radiusMeter} m)`;
+    ? `📍 Jarak Aktual: ${Math.round(jarak)} m dari ${lokasiSppg.nama}`
+    : `⚠️ Jarak Aktual: ${Math.round(jarak)} m dari ${lokasiSppg.nama} (di luar radius ${lokasiSppg.radiusMeter} m)`;
   el.zonaBadgeWrap.innerHTML = '';
   el.zonaBadgeWrap.appendChild(badge);
 
@@ -492,9 +497,13 @@ function tampilkanSelesaiLengkap() {
   if (s.masuk.keterangan) baris += baris_('Keterangan', s.masuk.keterangan);
   el.detailInfoList.innerHTML = baris;
 
-  let foto = '';
-  if (s.masuk.fotoUrl) foto += `<div class="absensi-detail-photo"><img src="${escapeHtml(s.masuk.fotoUrl)}" alt="Swafoto Masuk" loading="lazy"><span>Swafoto Masuk</span></div>`;
-  if (s.pulang.fotoUrl) foto += `<div class="absensi-detail-photo"><img src="${escapeHtml(s.pulang.fotoUrl)}" alt="Swafoto Pulang" loading="lazy"><span>Swafoto Pulang</span></div>`;
+  // SELALU render 2 kotak (Masuk kiri, Pulang kanan) -- kalau salah satu
+  // foto belum ada, tampilkan placeholder yang jelas, BUKAN menghilangkan
+  // kontainernya sama sekali (supaya layout 2 kolom selalu konsisten).
+  const kotakFoto_ = (url, label) => url
+    ? `<div class="absensi-detail-photo"><img src="${escapeHtml(url)}" alt="Swafoto ${label}" loading="lazy"><span>Swafoto ${label}</span></div>`
+    : `<div class="absensi-detail-photo absensi-detail-photo--kosong"><span class="absensi-detail-photo-placeholder">📷 Foto ${label} belum tersedia</span><span>Swafoto ${label}</span></div>`;
+  const foto = kotakFoto_(s.masuk.fotoUrl, 'Masuk') + kotakFoto_(s.pulang.fotoUrl, 'Pulang');
   el.detailFotoWrap.innerHTML = foto;
 
   el.stateSelesai.style.display = 'block';

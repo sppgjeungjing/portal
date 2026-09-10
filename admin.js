@@ -233,6 +233,9 @@
       // supaya admin-stok.js (file terpisah, tidak mengubah logic admin.js
       // yang sudah ada) bisa memakai sesi admin yang sama tanpa login ulang.
       window.sppgAdminToken = authToken;
+      // BARU (modul Pengelola SPPG): username juga di-expose, supaya modul
+      // itu bisa deteksi "ini akun saya sendiri" (cegah nonaktifkan diri sendiri di UI).
+      window.sppgAdminUsername = data.username;
       window.dispatchEvent(new CustomEvent('sppg-admin-ready'));
       el.loginWrap.classList.add('is-hidden');
       el.dashboardWrap.classList.remove('is-hidden');
@@ -1458,20 +1461,40 @@
     const dGagal = cache.errors.dashboardPengelola;
     if (!d) return; // belum selesai dimuat -- tampilan default "–" tetap terlihat sampai data datang
 
-    // -- Kehadiran Hari Ini --
-    document.getElementById('ovTotalRelawanHariIni').textContent = dGagal ? gagalTanda : d.kehadiran.totalRelawan;
+    // -- Kehadiran Hari Ini (6 kategori baru) --
+    document.getElementById('ovTerlambat').textContent = dGagal ? gagalTanda : d.kehadiran.terlambat;
     document.getElementById('ovSudahMasuk').textContent = dGagal ? gagalTanda : d.kehadiran.sudahMasuk;
-    document.getElementById('ovBelumMasuk').textContent = dGagal ? gagalTanda : d.kehadiran.belumMasuk;
     document.getElementById('ovSudahPulang').textContent = dGagal ? gagalTanda : d.kehadiran.sudahPulang;
+    document.getElementById('ovBelumMasuk').textContent = dGagal ? gagalTanda : d.kehadiran.belumMasuk;
     document.getElementById('ovBelumPulang').textContent = dGagal ? gagalTanda : d.kehadiran.belumPulang;
-    document.getElementById('ovIzinSakitCuti').textContent = dGagal ? gagalTanda : d.kehadiran.izinSakitCuti;
+    document.getElementById('ovBelumAbsen').textContent = dGagal ? gagalTanda : d.kehadiran.belumAbsen;
 
-    const kotakAksi = document.getElementById('ovKehadiranAksi');
-    if (!dGagal && d.kehadiran.belumMasuk > 0) {
-      kotakAksi.style.display = 'flex';
-      document.getElementById('ovKehadiranAksiTeks').textContent = d.kehadiran.belumMasuk + ' Relawan Belum Absen Masuk';
-    } else {
-      kotakAksi.style.display = 'none';
+    // Tombol "Kirim Notifikasi" per kategori -- HANYA muncul kalau kategori itu > 0,
+    // dan mengirim CUMA ke kategori tsb (backend hitung ulang sendiri, aman).
+    const wrapAksi = document.getElementById('ovKehadiranAksiWrap');
+    if (dGagal) { wrapAksi.innerHTML = ''; }
+    else {
+      const daftarAksi = [
+        { kategori: 'terlambat', jumlah: d.kehadiran.terlambat, label: 'terlambat' },
+        { kategori: 'belumMasuk', jumlah: d.kehadiran.belumMasuk, label: 'belum Absen Masuk' },
+        { kategori: 'belumPulang', jumlah: d.kehadiran.belumPulang, label: 'belum Absen Pulang' },
+        { kategori: 'belumAbsen', jumlah: d.kehadiran.belumAbsen, label: 'belum Absen' }
+      ].filter(x => x.jumlah > 0);
+      wrapAksi.innerHTML = daftarAksi.length ? daftarAksi.map(x => `
+        <div style="padding:9px 12px;background:#fff4e5;border-radius:8px;font-size:12.5px;color:#8a5a12;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span>${x.jumlah} relawan ${escapeHtml(x.label)}</span>
+          <button type="button" class="btn-mini primary" data-kirim-kategori="${x.kategori}">Kirim Notifikasi</button>
+        </div>`).join('') : '';
+      wrapAksi.querySelectorAll('[data-kirim-kategori]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const kategori = btn.dataset.kirimKategori;
+          btn.disabled = true;
+          try {
+            const hasil = await apiPost('kirimNotifikasiKategoriKehadiran', { token: authToken, kategori: kategori });
+            showSuccess('Notifikasi terkirim ke ' + hasil.jumlahDikirim + ' relawan.');
+          } catch (err) { showError(err.message); btn.disabled = false; }
+        });
+      });
     }
 
     // -- Jadwal & Penugasan Hari Ini --
@@ -1486,6 +1509,54 @@
     } else {
       jadwalTeksEl.textContent = 'Jadwal & Penugasan Hari Ini Belum Lengkap';
       jadwalEl.style.background = '#fff4e5'; jadwalTeksEl.style.color = '#8a5a12';
+    }
+
+    // -- Kalender Operasional (judul = Periode Aktif) --
+    const kalJudul = document.getElementById('ovKalenderJudul');
+    const kalIsi = document.getElementById('ovKalenderIsi');
+    if (dGagal) {
+      kalIsi.textContent = gagalTanda;
+    } else if (!d.periodeAktif) {
+      kalJudul.textContent = '🗓️ Kalender Operasional';
+      kalIsi.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);margin:0;">Belum ada Periode Kerja yang berstatus AKTIF.</p>';
+    } else {
+      kalJudul.textContent = '🗓️ ' + d.periodeAktif.nama;
+      if (!d.kalenderPeriodeAktif.length) {
+        kalIsi.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);margin:0;">Belum ada tanggal operasional untuk periode ini.</p>';
+      } else {
+        kalIsi.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + d.kalenderPeriodeAktif.map(k => {
+          const isHariIni = !!k.adalahHariIni;
+          const statusUp = String(k.status || '').toUpperCase();
+          let warna = '#e5e7eb', teksWarna = '#374151'; // BELUM BERJALAN (default)
+          if (statusUp.indexOf('SELESAI') !== -1) { warna = '#d1fae5'; teksWarna = '#065f46'; }
+          else if (statusUp.indexOf('BERJALAN') !== -1 || statusUp.indexOf('AKTIF') !== -1) { warna = '#fef3c7'; teksWarna = '#92400e'; }
+          return `<div style="min-width:64px;text-align:center;padding:8px 6px;border-radius:8px;background:${warna};color:${teksWarna};font-size:11.5px;font-weight:700;${isHariIni ? 'outline:2px solid var(--color-navy);outline-offset:1px;' : ''}">
+            <div>${escapeHtml(k.hari || '')}</div>
+            <div style="font-size:13px;">${escapeHtml(String(k.tanggal || '').split(' ')[0] || k.tanggal)}</div>
+          </div>`;
+        }).join('') + '</div>';
+      }
+    }
+
+    // -- Rekap 2 Minggu (otomatis Sementara/Selesai) --
+    const rekJudul = document.getElementById('ovRekapJudul');
+    const rekIsi = document.getElementById('ovRekapIsi');
+    if (dGagal) {
+      rekIsi.textContent = gagalTanda;
+    } else if (!d.rekapDuaMinggu.tersedia) {
+      rekJudul.textContent = '📊 Rekap 2 Minggu';
+      rekIsi.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);margin:0;">Belum ada Periode Kerja untuk direkap.</p>';
+    } else {
+      rekJudul.textContent = '📊 Rekap 2 Minggu — ' + (d.rekapDuaMinggu.sementara ? 'Sementara' : 'Periode Selesai') + ' (' + d.rekapDuaMinggu.judul + ')';
+      const rk = d.rekapDuaMinggu.data;
+      const totalHadir = rk.reduce((a, r) => a + (r.hadir || 0), 0);
+      const totalTerlambat = rk.reduce((a, r) => a + (r.terlambat || 0), 0);
+      const totalTidakHadir = rk.reduce((a, r) => a + (r.tidakHadir || 0), 0);
+      rekIsi.innerHTML = `<div class="admin-stat-grid">
+        <div class="admin-stat-card accent-success"><div class="admin-stat-value">${totalHadir}</div><div class="admin-stat-label">Total Hadir</div></div>
+        <div class="admin-stat-card accent-warning"><div class="admin-stat-value">${totalTerlambat}</div><div class="admin-stat-label">Total Terlambat</div></div>
+        <div class="admin-stat-card accent-danger"><div class="admin-stat-value">${totalTidakHadir}</div><div class="admin-stat-label">Total Tidak Hadir</div></div>
+      </div>`;
     }
 
     // -- SIRAGA — Persediaan --
@@ -1704,33 +1775,84 @@
 })();
 
 // ============================================================
-// JEMBATAN SIPANDU — pinjam sesi relawan milik Admin sendiri secara
-// otomatis, supaya SIPANDU bisa dikerjakan tanpa login relawan terpisah.
-// Tidak mengubah mekanisme SIPANDU/Relawan yang sudah ada sama sekali.
+// PANEL SIPANDU TERTANAM — persis pola SIRAGA (tab dalam 1 panel yang
+// sama), BUKAN lagi buka tab baru/pinjam sesi relawan. Admin sekarang
+// bisa akses data SIPANDU langsung pakai sesi Admin sendiri (backend
+// SipanduAuth.gs sudah di-update untuk meloloskan token Admin).
 // ============================================================
 (function () {
-  // Sekarang ada 2 tombol yang trigger alur sama: yang di sidebar (lama)
-  // dan yang baru di Dashboard Pengelola ("Lihat SIPANDU").
-  const tombolSemua = [document.getElementById('btnBukaSipandu'), document.getElementById('btnBukaSipanduOverview')].filter(Boolean);
-  if (!tombolSemua.length) return;
+  const panel = document.getElementById('panelHakAksesSipandu');
+  if (!panel) return;
 
-  async function bukaSipandu() {
-    if (!window.sppgAdminToken) { showError('Sesi Admin tidak ditemukan. Silakan login ulang.'); return; }
+  const subDashboard = document.getElementById('sipanduSubDashboard');
+  const subWo = document.getElementById('sipanduSubWo');
+  const subHakAkses = document.getElementById('sipanduSubHakAkses');
+  const semuaSub = { dashboard: subDashboard, wo: subWo, hakakses: subHakAkses };
+  let sudahMuatDashboard = false, sudahMuatWo = false;
+
+  document.querySelectorAll('#sipanduAdminTabs .chip-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('#sipanduAdminTabs .chip-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.sipanduSub;
+      Object.keys(semuaSub).forEach(k => { semuaSub[k].style.display = (k === target) ? 'block' : 'none'; });
+
+      if (target === 'dashboard' && !sudahMuatDashboard) { sudahMuatDashboard = true; muatSipanduDashboard_(); }
+      if (target === 'wo' && !sudahMuatWo) { sudahMuatWo = true; muatSipanduWo_(); }
+      // 'hakakses' sudah dimuat otomatis lewat admin-sipandu-akses.js
+      // (listener terpasang di sana untuk sub-tab ini, lihat file itu).
+      if (target === 'hakakses') window.dispatchEvent(new CustomEvent('sipandu-hakakses-dibuka'));
+    });
+  });
+
+  async function muatSipanduDashboard_() {
     try {
-      showLoading('Menyiapkan akses SIPANDU...');
-      const sesi = await apiGet('masukSebagaiRelawanUntukSipandu', { token: window.sppgAdminToken });
-      hideLoading();
-
-      // Simpan persis dengan pola sesi relawan biasa (kunci sama dengan
-      // yang dipakai auth-relawan.js), supaya sipandu.html langsung mengenali.
-      localStorage.setItem('sppgRelawanSession', JSON.stringify(sesi));
-
-      window.open('sipandu.html', '_blank');
+      const d = await apiGet('getSipanduDashboard', { token: window.sppgAdminToken });
+      document.getElementById('sipOvWoHariIni').textContent = d.woHariIni;
+      document.getElementById('sipOvPorsiHariIni').textContent = d.totalPorsiHariIni;
+      document.getElementById('sipOvReady').textContent = d.woReady;
+      document.getElementById('sipOvPopFilled').textContent = d.popFilled;
+      document.getElementById('sipOvCompleted').textContent = d.completed;
+      document.getElementById('sipOvOperasionalBerjalan').textContent = d.operasionalBerjalan;
     } catch (err) {
-      hideLoading();
-      showError(err.message);
+      showError('Gagal memuat Dashboard SIPANDU: ' + err.message);
     }
   }
 
-  tombolSemua.forEach(btn => btn.addEventListener('click', bukaSipandu));
+  async function muatSipanduWo_() {
+    const tbody = document.getElementById('tbodySipanduWo');
+    try {
+      const list = await apiGet('getWorkOrderList', { token: window.sppgAdminToken });
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Belum ada Work Order.</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(w => `
+        <tr>
+          <td>${escapeHtml(w.nomorWO || '-')}</td>
+          <td>${escapeHtml(w.tanggal || '-')}</td>
+          <td>${escapeHtml(w.namaMenu || '-')}</td>
+          <td>${w.jumlahPorsi}</td>
+          <td>${escapeHtml(w.status || '-')}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state" style="color:#b23a3a;">${escapeHtml(err.message)}</div></td></tr>`;
+    }
+  }
+
+  // Tab "Dashboard" (default) dimuat begitu panel SIPANDU pertama dibuka.
+  const btnTabSipandu = document.querySelector('[data-panel="panelHakAksesSipandu"]');
+  if (btnTabSipandu) {
+    btnTabSipandu.addEventListener('click', () => {
+      if (!sudahMuatDashboard) { sudahMuatDashboard = true; muatSipanduDashboard_(); }
+    });
+  }
+
+  // Tombol "Lihat SIPANDU" di Dashboard Pengelola sekarang PINDAH ke
+  // panel ini (bukan buka tab baru lagi).
+  const btnOverview = document.getElementById('btnBukaSipanduOverview');
+  if (btnOverview) {
+    btnOverview.addEventListener('click', () => { btnTabSipandu.click(); });
+  }
 })();
