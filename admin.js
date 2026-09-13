@@ -1530,11 +1530,14 @@
           let warna = '#e5e7eb', teksWarna = '#374151'; // BELUM BERJALAN (default)
           if (statusUp.indexOf('SELESAI') !== -1) { warna = '#d1fae5'; teksWarna = '#065f46'; }
           else if (statusUp.indexOf('BERJALAN') !== -1 || statusUp.indexOf('AKTIF') !== -1) { warna = '#fef3c7'; teksWarna = '#92400e'; }
-          return `<div style="min-width:64px;text-align:center;padding:8px 6px;border-radius:8px;background:${warna};color:${teksWarna};font-size:11.5px;font-weight:700;${isHariIni ? 'outline:2px solid var(--color-navy);outline-offset:1px;' : ''}">
+          return `<div data-tanggal-kalender="${escapeHtml(String(k.tanggal))}" style="cursor:pointer;min-width:64px;text-align:center;padding:8px 6px;border-radius:8px;background:${warna};color:${teksWarna};font-size:11.5px;font-weight:700;${isHariIni ? 'outline:2px solid var(--color-navy);outline-offset:1px;' : ''}" title="Klik untuk buka Jadwal & Penugasan">
             <div>${escapeHtml(k.hari || '')}</div>
             <div style="font-size:13px;">${escapeHtml(String(k.tanggal || '').split(' ')[0] || k.tanggal)}</div>
           </div>`;
         }).join('') + '</div>';
+        kalIsi.querySelectorAll('[data-tanggal-kalender]').forEach(el => {
+          el.addEventListener('click', () => { document.querySelector('[data-panel=panelShift]').click(); });
+        });
       }
     }
 

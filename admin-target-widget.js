@@ -70,7 +70,18 @@
     const selJenis = document.getElementById('selectJenisTarget' + prefix);
     const selDivisi = document.getElementById('selectDivisiTarget' + prefix);
     const selRelawan = document.getElementById('selectRelawanTarget' + prefix);
-    if (selJenis) selJenis.value = 'SEMUA';
+    // Pakai Target Penerima Default dari Pengaturan (kalau sudah diisi Admin),
+    // fallback ke SEMUA kalau belum ada.
+    const def = window.sppgTargetDefault || 'SEMUA';
+    if (selJenis) {
+      if (def.indexOf('DIVISI:') === 0) {
+        selJenis.value = 'DIVISI';
+        if (selDivisi) { selDivisi.value = def.slice(7); selDivisi.style.display = ''; }
+        if (selRelawan) { selRelawan.value = ''; selRelawan.style.display = 'none'; }
+        return;
+      }
+      selJenis.value = 'SEMUA';
+    }
     if (selDivisi) { selDivisi.value = ''; selDivisi.style.display = 'none'; }
     if (selRelawan) { selRelawan.value = ''; selRelawan.style.display = 'none'; }
   };

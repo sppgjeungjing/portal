@@ -17,6 +17,16 @@
       document.getElementById('inputTemplateNotif').value = p.TEMPLATE_NOTIFIKASI_DEFAULT || '';
       const selTz = document.getElementById('inputTimezone');
       if (p.TIMEZONE_SISTEM) selTz.value = p.TIMEZONE_SISTEM;
+
+      // Isi dropdown Target Default dengan daftar Divisi (reuse cache yang sudah dimuat Dashboard)
+      const selTarget = document.getElementById('inputTargetDefaultNotif');
+      try {
+        const divisi = await apiGetCached('getDivisi', {}, 600000);
+        selTarget.innerHTML = '<option value="SEMUA">Semua Relawan</option>' +
+          divisi.map(d => `<option value="DIVISI:${escapeHtml(d.nama)}">Divisi: ${escapeHtml(d.nama)}</option>`).join('');
+      } catch (e) { /* biarkan cuma "Semua Relawan" kalau divisi gagal dimuat */ }
+      selTarget.value = p.TARGET_DEFAULT_NOTIF || 'SEMUA';
+      window.sppgTargetDefault = p.TARGET_DEFAULT_NOTIF || 'SEMUA'; // dipakai admin-target-widget.js
     } catch (err) {
       showError('Gagal memuat pengaturan: ' + err.message);
     }
@@ -80,7 +90,9 @@
         simpan_({ NAMA_PORTAL: document.getElementById('inputNamaPortal').value.trim() }, 'Nama Portal disimpan.');
       });
       document.getElementById('btnSimpanNotif').addEventListener('click', () => {
-        simpan_({ TEMPLATE_NOTIFIKASI_DEFAULT: document.getElementById('inputTemplateNotif').value }, 'Template notifikasi disimpan.');
+        const target = document.getElementById('inputTargetDefaultNotif').value;
+        simpan_({ TEMPLATE_NOTIFIKASI_DEFAULT: document.getElementById('inputTemplateNotif').value, TARGET_DEFAULT_NOTIF: target }, 'Template & target notifikasi disimpan.');
+        window.sppgTargetDefault = target;
       });
       document.getElementById('btnSimpanSistem').addEventListener('click', () => {
         simpan_({ TIMEZONE_SISTEM: document.getElementById('inputTimezone').value }, 'Zona waktu disimpan.');

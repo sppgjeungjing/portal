@@ -15,7 +15,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#12294d">
 </head>
-<body class="admin-body">
+<body class="admin-body shell-pengelola">
 <div class="page-shell">
 
 <div class="bg-decor" aria-hidden="true">
@@ -830,12 +830,17 @@
       <input type="text" id="inputUsernamePengelola" placeholder="Username baru">
       <input type="text" id="inputNamaPengelola" placeholder="Nama">
       <input type="password" id="inputPasswordPengelola" placeholder="Password (min. 6 karakter)">
+      <select id="inputRolePengelola">
+        <option value="ADMIN">Admin (akses penuh)</option>
+        <option value="STAFF">Staff</option>
+      </select>
       <button type="button" class="btn-mini primary" id="btnTambahPengelola">+ Tambah Pengelola</button>
     </div>
+    <p style="font-size:11.5px;color:var(--color-text-muted);margin:6px 0 0;">Catatan: Role saat ini sebagai penanda/label saja — belum ada pembatasan akses berbeda secara otomatis antara Admin dan Staff.</p>
     <div class="table-wrap" style="margin-top:14px;">
       <table>
-        <thead><tr><th>Username</th><th>Nama</th><th>Status</th><th>Aksi</th></tr></thead>
-        <tbody id="tbodyPengelolaSppg"><tr><td colspan="4"><div class="empty-state">Memuat data...</div></td></tr></tbody>
+        <thead><tr><th>Username</th><th>Nama</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead>
+        <tbody id="tbodyPengelolaSppg"><tr><td colspan="5"><div class="empty-state">Memuat data...</div></td></tr></tbody>
       </table>
     </div>
   </div>
@@ -981,6 +986,36 @@
   <div class="admin-panel" id="panelWebsitePublik">
     <div><h1 style="font-size:18px;margin:0;color:var(--color-navy);">Kelola Website Publik</h1><p style="font-size:13px;margin:2px 0 0;color:var(--color-text-muted);">Isi &amp; perbarui konten Website Publik SPPG Jeungjing dari sini.</p></div>
     <div id="wpuDaftarHalaman" style="margin-top:14px;">Memuat...</div>
+
+    <details class="panel-block" style="margin-top:16px;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">Data Penerimaan (Penerima Manfaat)</summary>
+      <div style="margin-top:12px;">
+        <div class="inline-form" style="flex-wrap:wrap;">
+          <input type="text" id="inputKategoriPenerimaan" placeholder="Nama kategori (mis. Lansia)">
+          <input type="number" id="inputJumlahPenerimaanBaru" placeholder="Jumlah">
+          <button type="button" class="btn-mini primary" id="btnTambahDataPenerimaan">+ Tambah Kategori</button>
+        </div>
+        <div class="table-wrap" style="margin-top:10px;">
+          <table>
+            <thead><tr><th>Kategori</th><th>Jumlah</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="tbodyDataPenerimaan"><tr><td colspan="4"><div class="empty-state">Memuat...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel-block" style="margin-top:16px;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">Menu Website (nama, urutan, aktif/nonaktif)</summary>
+      <div style="margin-top:12px;">
+        <p style="font-size:12px;color:var(--color-text-muted);margin:0 0 10px;">Tombol "Portal SPPG Jeungjing &rarr;" tidak termasuk di sini — itu akses tetap ke Portal, tidak bisa diubah.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Label</th><th>Urutan</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="tbodyMenuWebsite"><tr><td colspan="4"><div class="empty-state">Memuat...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
   </div>
 
   <div class="admin-panel" id="panelPengaturan">
@@ -1014,7 +1049,12 @@
         <label style="font-size:12.5px;font-weight:600;color:var(--color-text-muted);">Template Pesan Default
           <textarea id="inputTemplateNotif" rows="3" style="display:block;width:100%;margin-top:4px;font-family:inherit;padding:8px 10px;border-radius:8px;border:1.5px solid var(--color-border);"></textarea>
         </label>
-        <p style="font-size:12px;color:var(--color-text-muted);margin:0;">Target penerima (Semua/Divisi/Individu) diatur langsung saat membuat Notifikasi/Informasi/Pengumuman di menu SIPIKA.</p>
+        <label style="font-size:12.5px;font-weight:600;color:var(--color-text-muted);">Target Penerima Default
+          <select id="inputTargetDefaultNotif" style="display:block;width:100%;margin-top:4px;">
+            <option value="SEMUA">Semua Relawan</option>
+          </select>
+        </label>
+        <p style="font-size:12px;color:var(--color-text-muted);margin:0;">Target ini otomatis terpilih saat membuat Notifikasi/Informasi/Pengumuman baru — tetap bisa diganti manual per pesan.</p>
         <button type="button" class="btn-mini primary" id="btnSimpanNotif" style="align-self:flex-start;">Simpan</button>
       </div>
     </details>

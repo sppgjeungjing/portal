@@ -300,6 +300,9 @@
   flex: none; width: max-content;
   justify-self: center;
 }
+/* Header Portal PENGELOLA khusus: logo sedikit lebih ke kiri dari center
+   (beda dari Header Relawan yang center penuh) -- sesuai spesifikasi. */
+body.shell-pengelola .shell-topbar-brand--portal { justify-self: start; margin-left: 12%; }
 .shell-topbar:has(.shell-topbar-brand--portal) .shell-topbar-right {
   justify-self: end;
 }

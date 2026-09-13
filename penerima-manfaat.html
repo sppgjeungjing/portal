@@ -50,7 +50,7 @@
 
   <section class="pub-section alt">
     <div class="pub-wrap">
-      <div class="pub-benef-grid">
+      <div class="pub-benef-grid" id="pubBenefGrid" data-fallback-rendered="1">
         <div class="pub-benef-card"><b>—</b><span>Peserta Didik</span></div>
         <div class="pub-benef-card"><b>—</b><span>Ibu Hamil</span></div>
         <div class="pub-benef-card"><b>—</b><span>Ibu Menyusui</span></div>
@@ -72,5 +72,22 @@
   </footer>
 
   <script src="public-nav.js"></script>
+  <script src="config.js"></script>
+  <script>
+    (async function () {
+      try {
+        const url = GOOGLE_APPS_SCRIPT_WEB_APP_URL + '?action=getDataPenerimaanPublik';
+        const res = await fetch(url);
+        const json = await res.json();
+        if (!json.success || !json.data || !json.data.length) return; // biarkan 4 kartu asli (fallback aman)
+        const grid = document.getElementById('pubBenefGrid');
+        grid.innerHTML = json.data.map(d =>
+          `<div class="pub-benef-card"><b>${d.jumlah || '—'}</b><span>${d.kategori}</span></div>`
+        ).join('');
+      } catch (e) {
+        // Gagal ambil data -- diamkan, 4 kartu asli tetap tampil.
+      }
+    })();
+  </script>
 </body>
 </html>
