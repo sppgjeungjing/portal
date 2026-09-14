@@ -26,19 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       showLoading('Memuat pengaturan...');
       const data = await apiGet('getPengaturanAkun', { token: sesi.token });
       hideLoading();
-
-      document.getElementById('statusAkun').textContent = data.statusAkun === 'AKTIF' ? 'Aktif' : 'Nonaktif';
       document.getElementById('loginTerakhir').textContent = formatTanggalWaktuIndo(data.loginTerakhir);
-
-      // Ringkasan identitas -- diambil dari profil supaya tidak perlu
-      // menambah data baru di endpoint pengaturan.
-      try {
-        const profil = await (window.sppgProfilPromise || apiGet('getProfilRelawan', { token: sesi.token }));
-        document.getElementById('setIdRelawan').textContent = profil.id || '—';
-        document.getElementById('setDivisi').textContent = profil.divisi || '—';
-        document.getElementById('setUsername').textContent = profil.username || '—';
-      } catch (e) { /* bagian pelengkap -- jangan gagalkan seluruh halaman */ }
-
       main.style.display = 'block';
     } catch (err) {
       hideLoading();
@@ -58,29 +46,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = 'index.html';
   });
 
+  // ---- Keluar dari Semua Perangkat -- WAJIB konfirmasi dulu (bukan langsung
+  // logout). Secara teknis memakai fungsi logout yang sama: arsitektur sesi
+  // portal ini 1 token aktif per waktu (login baru menggantikan token lama),
+  // jadi "keluar dari sesi ini" secara efektif SAMA DENGAN "keluar dari semua
+  // perangkat" -- tidak ada sesi lain yang tersisa aktif untuk akun ini.
+  document.getElementById('btnKeluarSemuaPerangkat').addEventListener('click', async () => {
+    if (!confirm('Anda akan keluar dari akun ini di semua perangkat. Lanjutkan?')) return;
+    try {
+      showLoading('Memproses...');
+      await apiPost('logoutRelawan', { token: sesi.token });
+    } catch (err) {
+      // Tetap lanjutkan keluar di sisi perangkat meski panggilan logout server gagal.
+    }
+    hideLoading();
+    hapusSesiRelawan();
+    window.location.href = 'index.html';
+  });
+
   muatPengaturan();
 });
 
 
-// ---- Ukuran teks besar: disimpan di perangkat masing-masing, tidak perlu
-// data baru di server. Berguna untuk relawan yang kesulitan membaca teks kecil.
+// ---- Preferensi Tampilan: Ukuran Teks, Tema, Kepadatan -- semuanya
+// disimpan di localStorage (per-perangkat), diterapkan LANGSUNG tanpa
+// tombol Simpan, dan dibaca sedini mungkin oleh terapkan-preferensi.js
+// di SEMUA halaman supaya konsisten (bukan cuma di halaman ini).
 (function () {
-  const KUNCI = 'sppg_teks_besar';
-  function terapkan(aktif) {
-    document.documentElement.style.fontSize = aktif ? '112.5%' : '';
-  }
-  document.addEventListener('DOMContentLoaded', () => {
-    const toggle = document.getElementById('toggleTeksBesar');
-    if (!toggle) return;
-    let aktif = false;
-    try { aktif = localStorage.getItem(KUNCI) === '1'; } catch (e) { /* penyimpanan tidak tersedia */ }
-    toggle.checked = aktif;
-    terapkan(aktif);
-    toggle.addEventListener('change', () => {
-      terapkan(toggle.checked);
-      try { localStorage.setItem(KUNCI, toggle.checked ? '1' : '0'); } catch (e) { /* abaikan */ }
+  function pasangGrup_(namaGrup, kunciStorage, atributHtml, terapkanUlangTema) {
+    document.addEventListener('DOMContentLoaded', () => {
+      const radios = document.querySelectorAll(`input[name="${namaGrup}"]`);
+      if (!radios.length) return;
+      let tersimpan = 'normal';
+      try { tersimpan = localStorage.getItem(kunciStorage) || radios[0].value; } catch (e) { /* penyimpanan tidak tersedia */ }
+      radios.forEach(r => { r.checked = (r.value === tersimpan); });
+      radios.forEach(r => {
+        r.addEventListener('change', () => {
+          if (!r.checked) return;
+          try { localStorage.setItem(kunciStorage, r.value); } catch (e) { /* abaikan */ }
+          if (terapkanUlangTema) {
+            let nilai = r.value;
+            if (nilai === 'sistem') {
+              nilai = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'gelap' : 'terang';
+            }
+            document.documentElement.setAttribute('data-tema', nilai);
+          } else {
+            document.documentElement.setAttribute(atributHtml, r.value);
+          }
+        });
+      });
     });
-  });
+  }
+  pasangGrup_('ukuranTeks', 'sppgUkuranTeks', 'data-ukuran-teks', false);
+  pasangGrup_('tema', 'sppgTema', 'data-tema', true);
+  pasangGrup_('kepadatan', 'sppgKepadatan', 'data-kepadatan', false);
 })();
 
 // ---- Unduh riwayat absensi periode aktif sebagai CSV

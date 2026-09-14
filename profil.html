@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+<script src="terapkan-preferensi.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Profil Saya — SPPG Jeungjing</title>
@@ -10,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=20260903c">
+<link rel="stylesheet" href="preferensi-tampilan.css">
 <link rel="stylesheet" href="portal.css?v=20260903c">
 <link rel="stylesheet" href="app-shell.css?v=20260903c">
 <link rel="stylesheet" href="rebrand.css?v=20260903c">
@@ -100,39 +102,40 @@
 
         <div id="profilMain" style="display:none;">
 
-          <section class="panel-block" style="margin-bottom:14px;">
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-              <div class="shell-sidebar-user-avatar" style="width:56px;height:56px;font-size:20px;" id="profilAvatar">–</div>
-              <div>
-                <h2 id="namaRelawan" style="margin:0 0 2px;font-size:17px;color:var(--color-navy);">—</h2>
-                <p id="divisiRelawan" style="margin:0;font-size:13px;color:var(--color-text-muted);">—</p>
-              </div>
-            </div>
-            <div class="profile-identity-list">
-              <div class="profile-identity-row"><span>ID Relawan</span><span id="idRelawan">—</span></div>
-              <div class="profile-identity-row"><span>Status</span><span id="statusRelawan">—</span></div>
-              <div class="profile-identity-row"><span>Username</span><span id="usernameRelawan">—</span></div>
-            </div>
-            <p style="font-size:11.5px;color:var(--color-text-muted);margin:10px 0 0;">Data di atas ditentukan oleh Admin dan tidak dapat diubah sendiri.</p>
+          <section class="panel-block" style="margin-bottom:14px;text-align:center;">
+            <div id="fotoProfilPratinjau" style="width:88px;height:88px;border-radius:50%;background:#eef2f8;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 auto 10px;color:var(--color-navy);font-weight:800;font-size:26px;">—</div>
+            <input type="file" id="inputFotoProfil" accept="image/*" style="font-size:12.5px;">
+            <p style="font-size:11.5px;color:var(--color-text-muted);margin:6px 0 10px;">JPG/PNG/WEBP, maks. 5MB. <span title="Foto dapat diubah">✏️</span></p>
+            <button type="button" id="btnSimpanFoto" class="btn-outline" style="width:100%;">Simpan Foto Profil</button>
           </section>
 
-          <p class="profile-section-title">Lengkapi Profil</p>
+          <p class="profile-section-title">🛡️ Identitas</p>
           <section class="panel-block" style="margin-bottom:14px;">
-            <form id="profilForm" novalidate>
-              <div class="form-card">
-                <label for="inputNoHp" class="form-label">Nomor HP</label>
-                <input type="tel" id="inputNoHp" class="form-input" placeholder="08xxxxxxxxxx">
-              </div>
-              <div class="form-card">
-                <label for="inputEmail" class="form-label">Email <span class="optional-tag">(opsional)</span></label>
-                <input type="email" id="inputEmail" class="form-input" placeholder="nama@email.com">
-              </div>
+            <div class="profile-identity-list">
+              <div class="profile-identity-row"><span>Nama Lengkap</span><span id="namaRelawan">—</span></div>
+              <div class="profile-identity-row"><span>ID Relawan</span><span id="idRelawan">—</span></div>
+              <div class="profile-identity-row"><span>Divisi</span><span id="divisiRelawan">—</span></div>
+              <div class="profile-identity-row"><span>Status</span><span id="statusRelawan">—</span></div>
+            </div>
+            <p style="font-size:11px;color:var(--color-text-muted);margin:8px 0 0;">🛡️ Dikelola Admin — hubungi Admin SPPG untuk perubahan.</p>
+          </section>
+
+          <form id="profilForm" novalidate>
+          <section class="panel-block" style="margin-bottom:14px;">
               <div class="form-group">
-                <label for="inputTanggalLahir">Tanggal Lahir</label>
+                <label for="inputUsernameBaru">Username <span title="Dapat diubah">✏️</span></label>
+                <div class="profile-identity-row" style="margin-bottom:8px;"><span>Username saat ini</span><span id="usernameRelawan">—</span></div>
+                <input type="text" id="inputUsernameBaru" class="form-input" placeholder="Username baru (huruf kecil, angka, titik, garis bawah)" autocomplete="off">
+                <p id="infoGantiUsername" style="font-size:12px;color:var(--color-text-muted);margin:6px 0 0;"></p>
+                <button type="button" id="btnGantiUsername" class="btn-outline" style="width:100%;margin-top:8px;">Ubah Username</button>
+              </div>
+
+              <div class="form-group" style="margin-top:14px;">
+                <label for="inputTanggalLahir">Tanggal Lahir <span title="Dapat diubah">✏️</span></label>
                 <input type="date" id="inputTanggalLahir" class="form-input">
               </div>
               <div class="form-group">
-                <label for="inputJenisKelamin">Jenis Kelamin</label>
+                <label for="inputJenisKelamin">Jenis Kelamin <span title="Dapat diubah">✏️</span></label>
                 <select id="inputJenisKelamin" class="form-input">
                   <option value="">Belum diisi</option>
                   <option value="Laki-laki">Laki-laki</option>
@@ -140,36 +143,74 @@
                 </select>
               </div>
               <div class="form-group">
-                <label for="inputAlamat">Alamat</label>
+                <label for="inputNik">NIK <span id="nikBadge" title="Terkunci setelah tersimpan">🔒</span></label>
+                <input type="text" id="inputNik" class="form-input" placeholder="16 digit NIK" maxlength="16" inputmode="numeric">
+                <p id="infoNik" style="font-size:11px;color:var(--color-text-muted);margin:6px 0 0;">NIK akan terkunci otomatis setelah tersimpan — perubahan selanjutnya hanya lewat Admin.</p>
+              </div>
+          </section>
+
+          <p class="profile-section-title">✏️ Kontak</p>
+          <section class="panel-block" style="margin-bottom:14px;">
+              <div class="form-card">
+                <label for="inputNoHp" class="form-label">Nomor HP <span title="Dapat diubah">✏️</span></label>
+                <input type="tel" id="inputNoHp" class="form-input" placeholder="08xxxxxxxxxx">
+              </div>
+              <div class="form-card">
+                <label for="inputEmail" class="form-label">Email <span class="optional-tag">(opsional)</span> <span title="Dapat diubah">✏️</span></label>
+                <input type="email" id="inputEmail" class="form-input" placeholder="nama@email.com">
+              </div>
+
+              <p style="font-size:12.5px;font-weight:700;color:var(--color-navy);margin:14px 0 8px;">Kontak Darurat <span title="Dapat diubah">✏️</span></p>
+              <div class="form-group">
+                <label for="inputKontakDaruratNama">Nama</label>
+                <input type="text" id="inputKontakDaruratNama" class="form-input" placeholder="Nama kontak darurat">
+              </div>
+              <div class="form-group">
+                <label for="inputKontakDaruratHubungan">Hubungan</label>
+                <select id="inputKontakDaruratHubungan" class="form-input">
+                  <option value="">Pilih hubungan</option>
+                  <option value="Orang Tua">Orang Tua</option>
+                  <option value="Saudara">Saudara</option>
+                  <option value="Pasangan">Pasangan</option>
+                  <option value="Wali">Wali</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="inputKontakDaruratNoHp">Nomor HP</label>
+                <input type="tel" id="inputKontakDaruratNoHp" class="form-input" placeholder="08xxxxxxxxxx">
+              </div>
+          </section>
+
+          <p class="profile-section-title">✏️ Alamat</p>
+          <section class="panel-block" style="margin-bottom:14px;">
+              <div class="form-group">
+                <label for="inputAlamat">Alamat Lengkap <span title="Dapat diubah">✏️</span></label>
                 <textarea id="inputAlamat" class="form-input" rows="2" placeholder="Alamat tempat tinggal"></textarea>
               </div>
-              <button type="submit" id="btnSimpanProfil" class="btn-submit">Simpan Perubahan</button>
-            </form>
+              <button type="submit" id="btnSimpanProfil" class="btn-submit" style="margin-top:4px;">Simpan Perubahan</button>
+          </section>
+          </form>
 
-            <p class="section-title">Foto Profil</p>
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px;">
-              <div id="fotoProfilPratinjau" style="width:64px;height:64px;border-radius:50%;background:#eef2f8;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;color:var(--color-navy);font-weight:800;">—</div>
-              <div style="flex:1;">
-                <input type="file" id="inputFotoProfil" accept="image/*" style="font-size:12.5px;">
-                <p style="font-size:12px;color:var(--color-text-muted);margin:6px 0 0;">Foto diperkecil otomatis sebelum diunggah.</p>
-              </div>
+          <p class="profile-section-title">🛡️ Keanggotaan SPPG</p>
+          <section class="panel-block" style="margin-bottom:14px;">
+            <div class="profile-identity-list">
+              <div class="profile-identity-row"><span>ID Relawan</span><span id="idRelawan2">—</span></div>
+              <div class="profile-identity-row"><span>Divisi</span><span id="divisiRelawan2">—</span></div>
+              <div class="profile-identity-row"><span>Tanggal Bergabung</span><span id="tanggalBergabungRelawan">—</span></div>
+              <div class="profile-identity-row"><span>Status Aktif/Nonaktif</span><span id="statusRelawan2">—</span></div>
             </div>
-            <button type="button" id="btnSimpanFoto" class="btn-outline" style="width:100%;">Simpan Foto Profil</button>
+            <p style="font-size:11px;color:var(--color-text-muted);margin:8px 0 0;">🛡️ Dikelola Admin.</p>
+          </section>
 
-            <p class="section-title">Ubah Username</p>
-            <p id="infoGantiUsername" style="font-size:12.5px;color:var(--color-text-muted);margin:-6px 0 10px;">Memuat...</p>
-            <div id="formGantiUsernameWrap">
-              <div class="form-group">
-                <label for="inputUsernameBaru">Username Baru</label>
-                <input type="text" id="inputUsernameBaru" class="form-input" placeholder="huruf kecil, angka, titik, garis bawah" autocomplete="off">
-              </div>
-              <div class="form-group">
-                <label for="inputUsernameBaru2">Ketik Ulang Username Baru</label>
-                <input type="text" id="inputUsernameBaru2" class="form-input" placeholder="ulangi untuk memastikan" autocomplete="off">
-              </div>
-              <p style="font-size:12.5px;color:#b23a3a;line-height:1.6;margin:0 0 10px;">⚠️ Setelah diubah, Anda <strong>login memakai username baru ini</strong>. Username hanya bisa diubah 1× setiap 14 hari.</p>
-              <button type="button" id="btnGantiUsername" class="btn-outline" style="width:100%;">Ubah Username</button>
+          <p class="profile-section-title">⚙️ Akses</p>
+          <section class="panel-block" style="margin-bottom:14px;">
+            <div class="profile-identity-list">
+              <div class="profile-identity-row"><span>Role</span><span id="roleRelawan">—</span></div>
+              <div class="profile-identity-row"><span>Hak Akses</span><span id="hakAksesRelawan">—</span></div>
+              <div class="profile-identity-row"><span>Terakhir Login</span><span id="terakhirLoginRelawan">—</span></div>
             </div>
+            <p style="font-size:11px;color:var(--color-text-muted);margin:8px 0 0;">⚙️ Informasi sistem — tidak dapat diubah.</p>
           </section>
 
           <p class="settings-section-title">Pengaturan Akun</p>

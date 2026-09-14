@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+<script src="terapkan-preferensi.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Pengaturan Akun — SPPG Jeungjing</title>
@@ -10,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=20260903c">
+<link rel="stylesheet" href="preferensi-tampilan.css">
 <link rel="stylesheet" href="portal.css?v=20260903c">
 <link rel="stylesheet" href="app-shell.css?v=20260903c">
 <link rel="stylesheet" href="rebrand.css?v=20260903c">
@@ -99,72 +101,96 @@
   </div>
 
         <div id="pengaturanMain" style="display:none;">
-          <section class="panel-block" style="margin-bottom:14px;">
-            <div class="profile-identity-list">
-              <div class="profile-identity-row"><span>Status Akun</span><span id="statusAkun">—</span></div>
-              <div class="profile-identity-row"><span>Login Terakhir</span><span id="loginTerakhir">—</span></div>
-              <div class="profile-identity-row"><span>ID Relawan</span><span id="setIdRelawan">—</span></div>
-              <div class="profile-identity-row"><span>Divisi</span><span id="setDivisi">—</span></div>
-              <div class="profile-identity-row"><span>Username</span><span id="setUsername">—</span></div>
-            </div>
-          </section>
 
-          <p class="settings-section-title">Keamanan &amp; Preferensi</p>
-          <nav class="settings-menu-list" aria-label="Menu Pengaturan Akun">
+          <p class="settings-section-title">🔐 Keamanan Akun</p>
+          <nav class="settings-menu-list" aria-label="Keamanan Akun">
             <a href="ganti-password.html" class="settings-menu-item">
-              <span class="settings-menu-item-icon">🔐</span>
+              <span class="settings-menu-item-icon">🔑</span>
               <span class="settings-menu-item-text">
                 <p class="settings-menu-item-title">Ganti Password</p>
                 <p class="settings-menu-item-desc">Ubah password akun Anda</p>
               </span>
               <span class="settings-menu-item-arrow">→</span>
             </a>
-            <a href="profil.html" class="settings-menu-item">
-              <span class="settings-menu-item-icon">👤</span>
-              <span class="settings-menu-item-text">
-                <p class="settings-menu-item-title">Ubah Username &amp; Data Pribadi</p>
-                <p class="settings-menu-item-desc">Foto profil, kontak, dan username</p>
-              </span>
-              <span class="settings-menu-item-arrow">→</span>
-            </a>
-            <a href="bantuan.html" class="settings-menu-item">
-              <span class="settings-menu-item-icon">❓</span>
-              <span class="settings-menu-item-text">
-                <p class="settings-menu-item-title">Bantuan &amp; Kontak Admin</p>
-                <p class="settings-menu-item-desc">Panduan penggunaan &amp; cara menghubungi Admin</p>
-              </span>
-              <span class="settings-menu-item-arrow">→</span>
-            </a>
           </nav>
+          <section class="panel-block" style="margin-bottom:14px;">
+            <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:var(--color-navy);">Aktivitas Login</p>
+            <div class="profile-identity-list">
+              <div class="profile-identity-row"><span>Login Terakhir</span><span id="loginTerakhir">—</span></div>
+            </div>
+            <button type="button" id="btnKeluarSemuaPerangkat" class="btn-outline" style="width:100%;margin-top:12px;">Keluar dari Semua Perangkat</button>
+          </section>
 
-          <p class="settings-section-title">Notifikasi</p>
+          <p class="settings-section-title">🔔 Notifikasi</p>
           <section class="panel-block" style="margin-bottom:14px;">
             <div>
-              <p style="margin:0;font-size:13.5px;font-weight:600;color:var(--color-navy);">Notifikasi ke HP</p>
-              <p style="margin:3px 0 10px;font-size:12.5px;color:var(--color-text-muted);">Dapat pemberitahuan langsung ke HP (belum absen, penugasan baru, dll) walau aplikasi sedang tertutup.</p>
+              <p style="margin:0;font-size:13.5px;font-weight:600;color:var(--color-navy);">Notifikasi Portal</p>
+              <p style="margin:3px 0 10px;font-size:12.5px;color:var(--color-text-muted);">Dapat pemberitahuan langsung ke HP (belum absen, penugasan baru, pengumuman, dll) walau aplikasi sedang tertutup.</p>
               <p id="statusNotifHp" style="font-size:12.5px;color:var(--color-text-muted);margin:0 0 10px;">Memeriksa status...</p>
               <button type="button" class="btn-outline" id="btnAktifkanNotifHp" style="width:100%;">🔔 Aktifkan Notifikasi HP</button>
             </div>
           </section>
 
-          <p class="settings-section-title">Tampilan</p>
+          <p class="settings-section-title">🖥️ Tampilan</p>
           <section class="panel-block" style="margin-bottom:14px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-              <div>
-                <p style="margin:0;font-size:13.5px;font-weight:600;color:var(--color-navy);">Ukuran Teks Besar</p>
-                <p style="margin:3px 0 0;font-size:12.5px;color:var(--color-text-muted);">Memperbesar tulisan di seluruh halaman.</p>
-              </div>
-              <input type="checkbox" id="toggleTeksBesar" style="width:22px;height:22px;flex-shrink:0;">
+            <p style="margin:0 0 8px;font-size:13.5px;font-weight:600;color:var(--color-navy);">Ukuran Teks</p>
+            <div class="settings-radio-group" role="radiogroup">
+              <label class="settings-radio-pill"><input type="radio" name="ukuranTeks" value="normal" checked> Normal</label>
+              <label class="settings-radio-pill"><input type="radio" name="ukuranTeks" value="besar"> Besar</label>
+            </div>
+
+            <p style="margin:18px 0 8px;font-size:13.5px;font-weight:600;color:var(--color-navy);">Tema</p>
+            <div class="settings-radio-group" role="radiogroup">
+              <label class="settings-radio-pill"><input type="radio" name="tema" value="terang" checked> Terang</label>
+              <label class="settings-radio-pill"><input type="radio" name="tema" value="gelap"> Gelap</label>
+              <label class="settings-radio-pill"><input type="radio" name="tema" value="sistem"> Ikuti Sistem</label>
+            </div>
+
+            <p style="margin:18px 0 8px;font-size:13.5px;font-weight:600;color:var(--color-navy);">Kepadatan Tampilan</p>
+            <div class="settings-radio-group" role="radiogroup">
+              <label class="settings-radio-pill"><input type="radio" name="kepadatan" value="nyaman" checked> Nyaman</label>
+              <label class="settings-radio-pill"><input type="radio" name="kepadatan" value="ringkas"> Ringkas</label>
             </div>
           </section>
 
-          <p class="settings-section-title">Data Saya</p>
+          <p class="settings-section-title">📥 Data Saya</p>
           <section class="panel-block" style="margin-bottom:14px;">
-            <button type="button" id="btnUnduhAbsensi" class="btn-outline" style="width:100%;">⬇️ Unduh Riwayat Absensi Saya (CSV)</button>
+            <button type="button" id="btnUnduhAbsensi" class="btn-outline" style="width:100%;">⬇️ Unduh Riwayat Presensi Saya (CSV)</button>
             <p style="font-size:12px;color:var(--color-text-muted);margin:8px 0 0;line-height:1.6;">Berisi riwayat pada periode yang sedang aktif.</p>
           </section>
 
+          <p class="settings-section-title">❓ Bantuan &amp; Kontak Admin</p>
+          <nav class="settings-menu-list" aria-label="Bantuan dan Kontak Admin">
+            <a href="bantuan.html" class="settings-menu-item">
+              <span class="settings-menu-item-icon">📖</span>
+              <span class="settings-menu-item-text">
+                <p class="settings-menu-item-title">Panduan Penggunaan</p>
+                <p class="settings-menu-item-desc">FAQ &amp; cara menggunakan Portal</p>
+              </span>
+              <span class="settings-menu-item-arrow">→</span>
+            </a>
+            <a href="bantuan.html#hubungi-admin" class="settings-menu-item">
+              <span class="settings-menu-item-icon">💬</span>
+              <span class="settings-menu-item-text">
+                <p class="settings-menu-item-title">Hubungi Admin</p>
+                <p class="settings-menu-item-desc">Kontak langsung lewat WhatsApp</p>
+              </span>
+              <span class="settings-menu-item-arrow">→</span>
+            </a>
+            <a href="bantuan.html#hubungi-admin" class="settings-menu-item">
+              <span class="settings-menu-item-icon">⚠️</span>
+              <span class="settings-menu-item-text">
+                <p class="settings-menu-item-title">Laporkan Masalah</p>
+                <p class="settings-menu-item-desc">Sampaikan kendala teknis ke Admin</p>
+              </span>
+              <span class="settings-menu-item-arrow">→</span>
+            </a>
+          </nav>
           <section class="panel-block">
+            <p style="margin:0;font-size:12.5px;color:var(--color-text-muted);text-align:center;">Portal SPPG Jeungjing · Versi 1.0</p>
+          </section>
+
+          <section class="panel-block" style="margin-top:14px;">
             <button type="button" id="btnKeluar" class="btn-danger-outline">Keluar</button>
           </section>
         </div>

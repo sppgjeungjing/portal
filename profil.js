@@ -10,23 +10,70 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const main = document.getElementById('profilMain');
+  let profilTerakhir = null;
+
+  function formatTanggalWaktu_(v) {
+    if (!v) return '—';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
 
   async function muatProfil() {
     try {
       showLoading('Memuat profil...');
       const profil = await (window.sppgProfilPromise || apiGet('getProfilRelawan', { token: sesi.token }));
       hideLoading();
+      profilTerakhir = profil;
 
       document.getElementById('namaRelawan').textContent = profil.nama;
-      document.getElementById('divisiRelawan').textContent = 'Relawan ' + profil.divisi;
       document.getElementById('idRelawan').textContent = profil.id;
+      document.getElementById('divisiRelawan').textContent = profil.divisi;
       document.getElementById('statusRelawan').textContent = profil.status;
       document.getElementById('usernameRelawan').textContent = profil.username;
+
       document.getElementById('inputNoHp').value = profil.noHp || '';
       document.getElementById('inputEmail').value = profil.email || '';
       document.getElementById('inputTanggalLahir').value = profil.tanggalLahir || '';
       document.getElementById('inputJenisKelamin').value = profil.jenisKelamin || '';
       document.getElementById('inputAlamat').value = profil.alamat || '';
+
+      const kd = profil.kontakDarurat || {};
+      document.getElementById('inputKontakDaruratNama').value = kd.nama || '';
+      document.getElementById('inputKontakDaruratHubungan').value = kd.hubungan || '';
+      document.getElementById('inputKontakDaruratNoHp').value = kd.noHp || '';
+
+      // NIK -- kalau SUDAH pernah diisi (nikSudahDiisi), tampilkan MASKED &
+      // KUNCI input (readonly) -- sesuai spesifikasi "terkunci setelah valid,
+      // perubahan selanjutnya hanya lewat Admin". Kalau BELUM diisi, biarkan
+      // terbuka untuk diisi user.
+      const inputNik = document.getElementById('inputNik');
+      const infoNik = document.getElementById('infoNik');
+      const badgeNik = document.getElementById('nikBadge');
+      if (profil.nikSudahDiisi) {
+        inputNik.value = profil.nikMasked;
+        inputNik.readOnly = true;
+        inputNik.style.background = '#f6f7f9';
+        infoNik.textContent = 'NIK sudah tersimpan dan terkunci. Hubungi Admin untuk perubahan.';
+        badgeNik.textContent = '🔒';
+      } else {
+        inputNik.value = '';
+        inputNik.readOnly = false;
+        infoNik.textContent = 'NIK akan terkunci otomatis setelah tersimpan — perubahan selanjutnya hanya lewat Admin.';
+        badgeNik.textContent = '✏️';
+      }
+
+      // Keanggotaan SPPG (duplikat tampilan readonly)
+      document.getElementById('idRelawan2').textContent = profil.id;
+      document.getElementById('divisiRelawan2').textContent = profil.divisi;
+      document.getElementById('tanggalBergabungRelawan').textContent = profil.tanggalBergabung || '—';
+      document.getElementById('statusRelawan2').textContent = profil.status;
+
+      // Akses -- murni informasi
+      const akses = profil.akses || {};
+      document.getElementById('roleRelawan').textContent = akses.role || 'Relawan';
+      document.getElementById('hakAksesRelawan').textContent = akses.hakAkses || 'Standar';
+      document.getElementById('terakhirLoginRelawan').textContent = formatTanggalWaktu_(akses.terakhirLogin);
 
       // Foto profil
       const pratinjau = document.getElementById('fotoProfilPratinjau');
@@ -36,16 +83,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         pratinjau.textContent = (profil.nama || '?').trim().charAt(0).toUpperCase();
       }
 
-      // Kelayakan ganti username -- backend yang menentukan, layar hanya menampilkan.
+      // Kelayakan ganti username -- backend yang menentukan. TIDAK PERNAH
+      // menampilkan angka hari cooldown ke user (sesuai spesifikasi) --
+      // kalau belum boleh, tombol dinonaktifkan dengan pesan generik saja.
       const info = document.getElementById('infoGantiUsername');
-      const wrap = document.getElementById('formGantiUsernameWrap');
-      const gu = profil.gantiUsername || { boleh: true, sisaHari: 0 };
+      const btnGanti = document.getElementById('btnGantiUsername');
+      const gu = profil.gantiUsername || { boleh: true };
       if (gu.boleh) {
-        info.textContent = 'Username sekarang: ' + profil.username + '. Bisa diubah sekarang.';
-        wrap.style.display = 'block';
+        info.textContent = '';
+        btnGanti.disabled = false;
       } else {
-        info.textContent = 'Username sekarang: ' + profil.username + '. Bisa diubah lagi dalam ' + gu.sisaHari + ' hari.';
-        wrap.style.display = 'none';
+        info.textContent = 'Data ini belum dapat diubah saat ini.';
+        btnGanti.disabled = true;
       }
 
       main.style.display = 'block';
@@ -64,16 +113,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     try {
       showLoading('Menyimpan profil...');
-      await apiPost('updateProfilRelawan', {
+      const payload = {
         token: sesi.token,
         noHp: document.getElementById('inputNoHp').value.trim(),
         email: document.getElementById('inputEmail').value.trim(),
         tanggalLahir: document.getElementById('inputTanggalLahir').value,
         jenisKelamin: document.getElementById('inputJenisKelamin').value,
-        alamat: document.getElementById('inputAlamat').value.trim()
-      });
+        alamat: document.getElementById('inputAlamat').value.trim(),
+        kontakDaruratNama: document.getElementById('inputKontakDaruratNama').value.trim(),
+        kontakDaruratHubungan: document.getElementById('inputKontakDaruratHubungan').value,
+        kontakDaruratNoHp: document.getElementById('inputKontakDaruratNoHp').value.trim()
+      };
+      // NIK cuma dikirim kalau BELUM terkunci (field masih editable) --
+      // supaya tidak sengaja mengirim ulang nilai bertopeng (masked) sebagai "NIK baru".
+      if (!profilTerakhir || !profilTerakhir.nikSudahDiisi) {
+        const nikDiketik = document.getElementById('inputNik').value.trim();
+        if (nikDiketik) payload.nik = nikDiketik;
+      }
+
+      const hasil = await apiPost('updateProfilRelawan', payload);
       hideLoading();
-      showSuccess('Profil berhasil disimpan.');
+      if (hasil.ditolak && hasil.ditolak.length) {
+        // Sebagian field tersimpan, sebagian belum bisa diubah -- pesan
+        // GENERIK saja, tidak menyebut field/hari spesifik.
+        showError('Sebagian data tersimpan. Data ini belum dapat diubah saat ini.');
+      } else {
+        showSuccess('Profil berhasil disimpan.');
+      }
+      await muatProfil();
     } catch (err) {
       hideLoading();
       showError(err.message);
@@ -120,12 +187,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ---- Ganti username (menyentuh jalur login -- konfirmasi ketik ulang wajib)
+  // ---- Ganti username -- field tunggal, konfirmasi via dialog sebelum submit
+  // (bukan ketik-ulang) supaya lebih ringkas, tetap ada jeda sebelum aksi
+  // yang menyentuh jalur login ini benar-benar dijalankan.
   document.getElementById('btnGantiUsername').addEventListener('click', async () => {
     const baru = document.getElementById('inputUsernameBaru').value.trim().toLowerCase();
-    const ulang = document.getElementById('inputUsernameBaru2').value.trim().toLowerCase();
     if (!baru) { showError('Username baru belum diisi.'); return; }
-    if (baru !== ulang) { showError('Ketikan ulang username tidak sama.'); return; }
     if (!confirm('Setelah diubah, Anda login memakai username "' + baru + '". Lanjutkan?')) return;
     try {
       showLoading('Mengubah username...');
@@ -133,7 +200,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       hideLoading();
       showSuccess('Username berhasil diubah menjadi ' + baru + '.');
       document.getElementById('inputUsernameBaru').value = '';
-      document.getElementById('inputUsernameBaru2').value = '';
       await muatProfil();
     } catch (err) {
       hideLoading();
