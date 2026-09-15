@@ -50,16 +50,9 @@
 
   <section class="pub-section alt">
     <div class="pub-wrap">
-      <div class="pub-menu-grid">
-        <div class="pub-menu-item"><div class="ico">🍚</div><div class="label">Nasi</div><div class="val">Karbohidrat</div></div>
-        <div class="pub-menu-item"><div class="ico">🍗</div><div class="label">Ayam Bumbu</div><div class="val">Protein</div></div>
-        <div class="pub-menu-item"><div class="ico">🥬</div><div class="label">Sayur Bening</div><div class="val">Serat & Vitamin</div></div>
-        <div class="pub-menu-item"><div class="ico">🍉</div><div class="label">Semangka</div><div class="val">Buah</div></div>
-        <div class="pub-menu-item"><div class="ico">🥛</div><div class="label">Susu</div><div class="val">Pelengkap</div></div>
+      <div id="menuHariIniIsi">
+        <p class="empty-state">Memuat menu hari ini...</p>
       </div>
-      <p style="color:var(--pub-ink-soft);margin-top:28px;max-width:600px;font-size:13.5px;">
-        Menu di atas adalah contoh tampilan. Untuk menghubungkan menu harian secara otomatis dari data SIPANDU, beri tahu saya kapan pun siap.
-      </p>
     </div>
   </section>
 
@@ -72,11 +65,66 @@
     </div>
   </footer>
 
-  <script>
-    document.getElementById('tglMenuHariIni').textContent =
-      new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  </script>
   <script src="public-nav.js"></script>
   <script src="config.js"></script>
+  <script>
+    // Menu Hari Ini -- diambil langsung dari data yang diisi Admin lewat
+    // Portal (Kelola Website Publik -> Menu Hari Ini). Kalau belum pernah
+    // diisi atau gagal dimuat, tampilkan pesan yang jelas -- BUKAN contoh
+    // statis lagi, dan BUKAN halaman kosong/error mentah.
+    function escapeHtmlMenuHariIni_(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    (async function () {
+      const wadah = document.getElementById('menuHariIniIsi');
+      const judulTgl = document.getElementById('tglMenuHariIni');
+      try {
+        const url = GOOGLE_APPS_SCRIPT_WEB_APP_URL + '?action=getMenuHarianTerbaruPublik';
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (!json.success || !json.data) {
+          if (judulTgl) judulTgl.textContent = 'Belum ada menu';
+          wadah.innerHTML = '<p style="color:var(--pub-ink-soft);">Menu belum tersedia. Silakan cek kembali nanti.</p>';
+          return;
+        }
+
+        const m = json.data;
+        if (judulTgl) judulTgl.textContent = [m.hari, m.tanggal].filter(Boolean).join(', ') || 'Menu terbaru';
+
+        const ikon = ['🍚', '🍗', '🥗', '🍲', '🍉', '🥛', '🍛', '🍞'];
+        const itemMenu = String(m.menu || '').split('+').map(s => s.trim()).filter(Boolean);
+
+        let html = '';
+        if (itemMenu.length) {
+          html += '<div class="pub-menu-grid">' +
+            itemMenu.map((it, i) => `<div class="pub-menu-item"><div class="ico">${ikon[i % ikon.length]}</div><div class="label">${escapeHtmlMenuHariIni_(it)}</div></div>`).join('') +
+            '</div>';
+        }
+        if (m.komposisi) {
+          html += `<p style="margin-top:24px;font-size:13.5px;color:var(--pub-ink-soft);"><strong>Komposisi:</strong> ${escapeHtmlMenuHariIni_(m.komposisi)}</p>`;
+        }
+
+        const kategoriLabel = { kecil: 'Porsi Kecil', besar: 'Porsi Besar', balita: 'Balita', bumil: 'Ibu Hamil', busui: 'Ibu Menyusui' };
+        const gizi = m.gizi || {};
+        const barisGizi = Object.keys(kategoriLabel)
+          .map(k => ({ label: kategoriLabel[k], g: gizi[k] || {} }))
+          .filter(x => x.g.kkal || x.g.protein || x.g.lemak || x.g.karbo || x.g.serat);
+
+        if (barisGizi.length) {
+          html += '<p style="font-size:12.5px;font-weight:700;color:var(--pub-navy);margin:28px 0 12px;">Kandungan Gizi per Porsi</p>';
+          html += '<div class="table-wrap"><table><thead><tr><th>Kategori</th><th>Kkal</th><th>Protein (g)</th><th>Lemak (g)</th><th>Karbo (g)</th><th>Serat (g)</th></tr></thead><tbody>' +
+            barisGizi.map(x => `<tr><td>${escapeHtmlMenuHariIni_(x.label)}</td><td>${escapeHtmlMenuHariIni_(x.g.kkal || '-')}</td><td>${escapeHtmlMenuHariIni_(x.g.protein || '-')}</td><td>${escapeHtmlMenuHariIni_(x.g.lemak || '-')}</td><td>${escapeHtmlMenuHariIni_(x.g.karbo || '-')}</td><td>${escapeHtmlMenuHariIni_(x.g.serat || '-')}</td></tr>`).join('') +
+            '</tbody></table></div>';
+        }
+
+        wadah.innerHTML = html || '<p style="color:var(--pub-ink-soft);">Menu belum tersedia. Silakan cek kembali nanti.</p>';
+      } catch (e) {
+        // Gagal ambil data (mis. offline) -- pesan ramah, bukan halaman putih/error mentah.
+        wadah.innerHTML = '<p style="color:var(--pub-ink-soft);">Menu belum dapat dimuat. Silakan coba lagi nanti.</p>';
+      }
+    })();
+  </script>
 </body>
 </html>

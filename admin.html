@@ -1005,6 +1005,40 @@
     </details>
 
     <details class="panel-block" style="margin-top:16px;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">Menu Hari Ini (menu makanan &amp; gizi harian)</summary>
+      <div style="margin-top:12px;">
+        <p style="font-size:12px;color:var(--color-text-muted);margin:0 0 10px;">Tempel teks menu harian (format WhatsApp seperti biasa dikirim) di bawah, lalu klik "Baca Otomatis" — field di bawahnya akan terisi sendiri. Cek dulu isinya sebelum menekan Simpan.</p>
+        <textarea id="taTempelMenuHarian" rows="9" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--color-border);" placeholder="Tempel teks menu harian di sini..."></textarea>
+        <button type="button" class="btn-outline" id="btnBacaMenuHarian" style="margin-top:8px;">📋 Baca Otomatis dari Teks</button>
+        <p id="statusBacaMenuHarian" style="font-size:12px;margin:6px 0 0;"></p>
+
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
+          <input type="hidden" id="mhEditId" value="">
+          <div class="inline-form-relawan" style="flex-wrap:wrap;">
+            <input type="text" id="mhTanggal" placeholder="Tanggal (DD/MM/YY)" style="width:150px;">
+            <input type="text" id="mhHari" placeholder="Hari (mis. Senin)" style="width:130px;">
+          </div>
+          <input type="text" id="mhMenu" placeholder="Menu (mis. NASI + RENDANG SAPI + TAHU GORENG + ...)">
+          <input type="text" id="mhKomposisi" placeholder="Komposisi (mis. Nasi + lauk hewani + lauk nabati + sayur + buah)">
+
+          <div id="wadahGiziMenuHarian" style="display:flex;flex-direction:column;gap:10px;"></div>
+
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn-mini primary" id="btnSimpanMenuHarian" style="align-self:flex-start;">Simpan Menu Hari Ini</button>
+            <button type="button" class="btn-mini" id="btnBatalEditMenuHarian" style="align-self:flex-start;display:none;">Batal Edit</button>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="margin-top:16px;">
+          <table>
+            <thead><tr><th>Tanggal</th><th>Menu</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="tbodyMenuHarian"><tr><td colspan="4"><div class="empty-state">Memuat...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel-block" style="margin-top:16px;">
       <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">Menu Website (nama, urutan, aktif/nonaktif)</summary>
       <div style="margin-top:12px;">
         <p style="font-size:12px;color:var(--color-text-muted);margin:0 0 10px;">Tombol "Portal SPPG Jeungjing &rarr;" tidak termasuk di sini — itu akses tetap ke Portal, tidak bisa diubah.</p>

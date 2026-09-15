@@ -21,6 +21,14 @@
         const kunci = el.getAttribute('data-konten');
         if (konten[kunci]) el.textContent = konten[kunci];
       });
+      // BARU: data-konten-href -- sama seperti data-konten di atas, tapi
+      // untuk elemen <a> yang perlu diperbarui atribut href-nya (mis. link
+      // Instagram/TikTok), bukan teksnya. Fallback aman yang sama: kalau
+      // Admin belum isi, href asli di HTML (biasanya "#") tetap dipakai.
+      document.querySelectorAll('[data-konten-href]').forEach(el => {
+        const kunci = el.getAttribute('data-konten-href');
+        if (konten[kunci]) el.setAttribute('href', konten[kunci]);
+      });
     } catch (e) {
       // Gagal ambil konten CMS -- diamkan, teks HTML asli tetap tampil (fallback aman).
     }
