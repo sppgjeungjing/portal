@@ -91,36 +91,30 @@
     doc.save('laporan-kehadiran-' + hasil.periodeAwal + '-sd-' + hasil.periodeAkhir + '.pdf');
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // Coba pasang wadahnya berulang sebentar -- panel Rekap 2 Minggu
-    // dirender belakangan oleh admin.js, jadi elemen wadahnya belum
-    // tentu ada persis saat DOMContentLoaded.
-    let percobaan = 0;
-    const interval = setInterval(() => {
-      const wadah = bikinWadahExport_();
-      percobaan++;
-      if (wadah || percobaan > 20) clearInterval(interval);
-      if (!wadah) return;
+  // FASE 2: panelDuaMinggu dikonfirmasi HTML statis (selalu ada begitu
+  // skrip ini jalan, baik dimuat statis di akhir <body> maupun lazy saat
+  // tab diklik) -- polling/DOMContentLoaded sebelumnya tidak diperlukan,
+  // disederhanakan jadi langsung sinkron seperti admin-role.js.
+  const wadah = bikinWadahExport_();
+  if (wadah) {
+    document.getElementById('btnExportCsvLaporan').addEventListener('click', async () => {
+      const status = document.getElementById('statusExportLaporan');
+      try {
+        status.textContent = 'Menyiapkan CSV...';
+        const hasil = await ambilDataExport_();
+        unduhFile_('laporan-kehadiran-' + hasil.periodeAwal + '-sd-' + hasil.periodeAkhir + '.csv', '\ufeff' + keCsv_(hasil), 'text/csv;charset=utf-8;');
+        status.textContent = 'CSV berhasil diunduh.';
+      } catch (err) { status.textContent = '❌ ' + err.message; }
+    });
 
-      document.getElementById('btnExportCsvLaporan').addEventListener('click', async () => {
-        const status = document.getElementById('statusExportLaporan');
-        try {
-          status.textContent = 'Menyiapkan CSV...';
-          const hasil = await ambilDataExport_();
-          unduhFile_('laporan-kehadiran-' + hasil.periodeAwal + '-sd-' + hasil.periodeAkhir + '.csv', '\ufeff' + keCsv_(hasil), 'text/csv;charset=utf-8;');
-          status.textContent = 'CSV berhasil diunduh.';
-        } catch (err) { status.textContent = '❌ ' + err.message; }
-      });
-
-      document.getElementById('btnExportPdfLaporan').addEventListener('click', async () => {
-        const status = document.getElementById('statusExportLaporan');
-        try {
-          status.textContent = 'Menyiapkan PDF...';
-          const hasil = await ambilDataExport_();
-          await buatPdf_(hasil);
-          status.textContent = 'PDF berhasil diunduh.';
-        } catch (err) { status.textContent = '❌ ' + err.message; }
-      });
-    }, 300);
-  });
+    document.getElementById('btnExportPdfLaporan').addEventListener('click', async () => {
+      const status = document.getElementById('statusExportLaporan');
+      try {
+        status.textContent = 'Menyiapkan PDF...';
+        const hasil = await ambilDataExport_();
+        await buatPdf_(hasil);
+        status.textContent = 'PDF berhasil diunduh.';
+      } catch (err) { status.textContent = '❌ ' + err.message; }
+    });
+  }
 })();

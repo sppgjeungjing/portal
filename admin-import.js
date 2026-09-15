@@ -116,18 +116,13 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    let percobaan = 0;
-    const interval = setInterval(() => {
-      const wadah = bikinWadahImport_();
-      percobaan++;
-      if (wadah || percobaan > 20) clearInterval(interval);
-      if (!wadah) return;
-
-      document.getElementById('inputCsvImport').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) prosesFile_(file);
-      });
-    }, 300);
-  });
+  // FASE 2: panelRelawan dikonfirmasi HTML statis -- disederhanakan jadi
+  // langsung sinkron, sama seperti admin-export.js.
+  const wadah = bikinWadahImport_();
+  if (wadah) {
+    document.getElementById('inputCsvImport').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) prosesFile_(file);
+    });
+  }
 })();

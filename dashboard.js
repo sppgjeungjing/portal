@@ -178,5 +178,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     hideLoading();
     showError(err.message || 'Gagal memuat dashboard.');
+    // FASE 2: sebelumnya dashboardMain TETAP display:none kalau pemuatan
+    // gagal -- toast error hilang setelah beberapa detik dan pengguna
+    // ditinggalkan di halaman kosong tanpa penjelasan maupun cara mencoba
+    // lagi selain me-reload manual. Sekarang tampilkan status gagal +
+    // tombol Coba Lagi di dalam area konten itu sendiri.
+    main.innerHTML = `
+      <div class="empty-state" style="padding:40px 20px;text-align:center;">
+        <p style="margin:0 0 12px;font-size:14px;color:#55606f;">Data belum dapat dimuat. Periksa koneksi internet Anda.</p>
+        <button type="button" id="btnCobaLagiDashboard" class="btn-outline">↻ Coba Lagi</button>
+      </div>`;
+    main.style.display = 'block';
+    const btnCobaLagi = document.getElementById('btnCobaLagiDashboard');
+    if (btnCobaLagi) btnCobaLagi.addEventListener('click', () => window.location.reload());
   }
 });

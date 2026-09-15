@@ -152,36 +152,30 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    let percobaan = 0;
-    const interval = setInterval(() => {
-      const panel = document.getElementById('panelWebsitePublik');
-      percobaan++;
-      if (panel || percobaan > 20) clearInterval(interval);
-      if (!panel) return;
+  // FASE 2: panelWebsitePublik dikonfirmasi HTML statis -- disederhanakan jadi langsung sinkron.
+  const btnTab = document.querySelector('[data-panel="panelWebsitePublik"]');
+  if (btnTab) {
+    btnTab.addEventListener('click', () => {
+      if (sudahDimuat) return;
+      sudahDimuat = true;
+      muatDaftar_();
+      muatDataPenerimaan_();
+      muatMenuWebsite_();
+    });
+  }
 
-      const btnTab = document.querySelector('[data-panel="panelWebsitePublik"]');
-      if (btnTab) {
-        btnTab.addEventListener('click', () => {
-          if (sudahDimuat) return;
-          sudahDimuat = true;
-          muatDaftar_();
-          muatDataPenerimaan_();
-          muatMenuWebsite_();
-        });
-      }
-
-      document.getElementById('btnTambahDataPenerimaan').addEventListener('click', async () => {
-        const inputKategori = document.getElementById('inputKategoriPenerimaan');
-        const inputJumlah = document.getElementById('inputJumlahPenerimaanBaru');
-        if (!inputKategori.value.trim()) { showError('Nama kategori wajib diisi.'); return; }
-        try {
-          await apiPost('addDataPenerimaan', { token: token(), kategori: inputKategori.value.trim(), jumlah: inputJumlah.value || 0 });
-          showSuccess('Kategori baru ditambahkan.');
-          inputKategori.value = ''; inputJumlah.value = '';
-          muatDataPenerimaan_();
-        } catch (err) { showError(err.message); }
-      });
-    }, 300);
-  });
+  const btnTambahPenerimaan = document.getElementById('btnTambahDataPenerimaan');
+  if (btnTambahPenerimaan) {
+    btnTambahPenerimaan.addEventListener('click', async () => {
+      const inputKategori = document.getElementById('inputKategoriPenerimaan');
+      const inputJumlah = document.getElementById('inputJumlahPenerimaanBaru');
+      if (!inputKategori.value.trim()) { showError('Nama kategori wajib diisi.'); return; }
+      try {
+        await apiPost('addDataPenerimaan', { token: token(), kategori: inputKategori.value.trim(), jumlah: inputJumlah.value || 0 });
+        showSuccess('Kategori baru ditambahkan.');
+        inputKategori.value = ''; inputJumlah.value = '';
+        muatDataPenerimaan_();
+      } catch (err) { showError(err.message); }
+    });
+  }
 })();

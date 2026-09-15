@@ -1120,17 +1120,15 @@
 <script src="common.js?v=20260903c"></script>
 <script src="app-shell.js?v=20260903c"></script>
 <script src="admin.js?v=20260903c"></script>
-<script src="admin-stok.js?v=20260903c"></script>
-<script src="admin-shift.js?v=20260903c"></script>
-<script src="admin-role.js?v=20260903c"></script>
-<script src="admin-export.js"></script>
+<!-- FASE 2: admin-stok.js, admin-shift.js, admin-role.js, admin-export.js,
+     admin-import.js, admin-pengelola-sppg.js, admin-pengaturan.js, dan
+     admin-website-publik.js SEKARANG dimuat lazy oleh admin.js sendiri
+     (lihat MODUL_LAZY di admin.js) -- baru diambil saat tab terkait
+     pertama kali dibuka, bukan semua dimuat di sini di awal. Jangan
+     tambahkan lagi <script> untuk 8 file itu di sini. -->
 <script src="admin-charts.js"></script>
-<script src="admin-import.js"></script>
 <script src="admin-target-widget.js"></script>
 <script src="admin-sipandu-akses.js"></script>
-<script src="admin-pengelola-sppg.js"></script>
-<script src="admin-pengaturan.js"></script>
-<script src="admin-website-publik.js"></script>
 <script>document.addEventListener('DOMContentLoaded', function () { initShell({ storageKey: 'sppgSidebarCollapsedAdmin' }); });</script>
 </body>
 </html>

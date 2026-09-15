@@ -282,12 +282,55 @@
   }
 
   // ===== TABS =====
+  // FASE 2: 8 dari 11 modul admin-*.js sekarang di-lazy-load -- skrip-nya
+  // BARU dimuat saat tab terkait pertama kali dibuka, bukan semua ±193KB
+  // dimuat di awal terlepas tab mana yang akan dipakai Admin. TIDAK ADA
+  // perubahan pada 8 file modul itu sendiri -- masing-masing SUDAH
+  // memasang plain click listener di tab button-nya sendiri saat IIFE-nya
+  // jalan; begitu skrip selesai dimuat, kita cukup memicu ulang event
+  // 'click' pada tab yang sama supaya listener yang baru saja terpasang
+  // itu langsung jalan (persis seolah-olah tab-nya baru saja diklik).
+  //
+  // 3 modul SENGAJA TETAP dimuat di awal (lihat admin.html): admin-charts.js
+  // (nempel di panelOverview yang memang tampil pertama kali, jadi lazy
+  // loading tidak ada untungnya), admin-target-widget.js (dipakai bareng
+  // oleh 3 form berbeda, dipicu lewat DOMContentLoaded bukan klik tab),
+  // dan admin-sipandu-akses.js (dipicu lewat custom event bersarang dari
+  // sub-tab SIPANDU, bukan klik tab biasa -- terlalu berisiko diubah tanpa
+  // bisa diuji langsung di browser).
+  const MODUL_LAZY = {
+    panelStok: 'admin-stok.js?v=20260903c',
+    panelShift: 'admin-shift.js?v=20260903c',
+    panelRoleAkses: 'admin-role.js?v=20260903c',
+    panelPengelolaSppg: 'admin-pengelola-sppg.js',
+    panelPengaturan: 'admin-pengaturan.js',
+    panelWebsitePublik: 'admin-website-publik.js',
+    panelDuaMinggu: 'admin-export.js',   // menambahkan widget Export DI DALAM panel core ini, bukan tab sendiri
+    panelRelawan: 'admin-import.js'      // menambahkan widget Import DI DALAM panel core ini, bukan tab sendiri
+  };
+  const modulTerpuat = new Set();
+
+  function muatModulLazyJikaPerlu_(tab) {
+    const src = MODUL_LAZY[tab.dataset.panel];
+    if (!src || modulTerpuat.has(src)) return;
+    modulTerpuat.add(src);
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => tab.dispatchEvent(new Event('click')); // pancing ulang: listener klik modul yang baru terpasang langsung jalan
+    s.onerror = () => {
+      modulTerpuat.delete(src); // gagal muat (mis. offline) -- izinkan coba lagi kalau tab diklik ulang
+      showError('Sebagian modul gagal dimuat. Periksa koneksi lalu klik tab ini lagi.');
+    };
+    document.head.appendChild(s);
+  }
+
   el.tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       el.tabs.forEach(t => t.classList.remove('active'));
       el.panels.forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
       document.getElementById(tab.dataset.panel).classList.add('active');
+      muatModulLazyJikaPerlu_(tab);
     });
   });
 

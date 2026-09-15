@@ -119,6 +119,12 @@ async function bootRelawanShell() {
   // identik ke server -- ini salah satu penyebab dashboard terasa lambat.
   window.sppgProfilPromise = apiGet('getProfilRelawan', { token: sesi.token });
 
+  // FASE 2: getNotifikasiRelawan TIDAK bergantung pada hasil getProfilRelawan
+  // -- sebelumnya baru dikirim SETELAH profil selesai (menunggu bergantian),
+  // padahal keduanya bisa jalan BERSAMAAN. Dipicu di sini (sebelum await
+  // manapun) supaya kedua request benar-benar berangkat di waktu yang sama.
+  const notifikasiPromise = apiGet('getNotifikasiRelawan', { token: sesi.token }).catch(() => []);
+
   try {
     const profil = await window.sppgProfilPromise;
     const inisial = initialsFromName(profil.nama);
@@ -145,7 +151,7 @@ async function bootRelawanShell() {
 
     // Badge notifikasi: dari collection Notifikasi asli di backend, dikurangi
     // yang ID-nya sudah tercatat "dibaca" di perangkat ini (lihat notifikasi.js).
-    const notifikasi = await apiGet('getNotifikasiRelawan', { token: sesi.token }).catch(() => []);
+    const notifikasi = await notifikasiPromise;
     const readSet = getNotifReadSet(sesi.idRelawan);
     let belum = 0;
     (notifikasi || []).forEach(n => { if (!readSet.has(n.id)) belum++; });

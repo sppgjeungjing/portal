@@ -64,46 +64,41 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    let percobaan = 0;
-    const interval = setInterval(() => {
-      const panel = document.getElementById('panelPengelolaSppg');
-      percobaan++;
-      if (panel || percobaan > 20) clearInterval(interval);
-      if (!panel) return;
+  // FASE 2: panelPengelolaSppg dikonfirmasi HTML statis -- disederhanakan
+  // jadi langsung sinkron.
+  let sudahDimuat = false;
+  const btnTab = document.querySelector('[data-panel="panelPengelolaSppg"]');
+  if (btnTab) {
+    btnTab.addEventListener('click', () => {
+      if (sudahDimuat) return;
+      sudahDimuat = true;
+      muatTabel_();
+    });
+  }
 
-      let sudahDimuat = false;
-      const btnTab = document.querySelector('[data-panel="panelPengelolaSppg"]');
-      if (btnTab) {
-        btnTab.addEventListener('click', () => {
-          if (sudahDimuat) return;
-          sudahDimuat = true;
-          muatTabel_();
+  const btnTambah = document.getElementById('btnTambahPengelola');
+  if (btnTambah) {
+    btnTambah.addEventListener('click', async () => {
+      const inputUsername = document.getElementById('inputUsernamePengelola');
+      const inputNama = document.getElementById('inputNamaPengelola');
+      const inputPassword = document.getElementById('inputPasswordPengelola');
+      const inputRole = document.getElementById('inputRolePengelola');
+
+      if (!inputUsername.value.trim()) { showError('Username wajib diisi.'); return; }
+      if (!inputPassword.value || inputPassword.value.length < 6) { showError('Password minimal 6 karakter.'); return; }
+
+      try {
+        await apiPost('addPengelola', {
+          token: token(),
+          username: inputUsername.value.trim(),
+          nama: inputNama.value.trim(),
+          password: inputPassword.value,
+          role: inputRole.value
         });
-      }
-
-      document.getElementById('btnTambahPengelola').addEventListener('click', async () => {
-        const inputUsername = document.getElementById('inputUsernamePengelola');
-        const inputNama = document.getElementById('inputNamaPengelola');
-        const inputPassword = document.getElementById('inputPasswordPengelola');
-        const inputRole = document.getElementById('inputRolePengelola');
-
-        if (!inputUsername.value.trim()) { showError('Username wajib diisi.'); return; }
-        if (!inputPassword.value || inputPassword.value.length < 6) { showError('Password minimal 6 karakter.'); return; }
-
-        try {
-          await apiPost('addPengelola', {
-            token: token(),
-            username: inputUsername.value.trim(),
-            nama: inputNama.value.trim(),
-            password: inputPassword.value,
-            role: inputRole.value
-          });
-          showSuccess('Akun Pengelola berhasil ditambahkan.');
-          inputUsername.value = ''; inputNama.value = ''; inputPassword.value = '';
-          muatTabel_();
-        } catch (err) { showError(err.message); }
-      });
-    }, 300);
-  });
+        showSuccess('Akun Pengelola berhasil ditambahkan.');
+        inputUsername.value = ''; inputNama.value = ''; inputPassword.value = '';
+        muatTabel_();
+      } catch (err) { showError(err.message); }
+    });
+  }
 })();

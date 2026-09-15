@@ -61,42 +61,42 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    let percobaan = 0;
-    const interval = setInterval(() => {
-      const panel = document.getElementById('panelPengaturan');
-      percobaan++;
-      if (panel || percobaan > 20) clearInterval(interval);
-      if (!panel) return;
+  // FASE 2: panelPengaturan dikonfirmasi HTML statis -- disederhanakan jadi langsung sinkron.
+  const btnTab = document.querySelector('[data-panel="panelPengaturan"]');
+  if (btnTab) {
+    btnTab.addEventListener('click', () => {
+      if (!sudahMuatForm) { sudahMuatForm = true; muatFormPengaturan_(); }
+    });
+  }
 
-      const btnTab = document.querySelector('[data-panel="panelPengaturan"]');
-      if (btnTab) {
-        btnTab.addEventListener('click', () => {
-          if (!sudahMuatForm) { sudahMuatForm = true; muatFormPengaturan_(); }
-        });
-      }
+  // Log Aktivitas dimuat saat kategori 6 dibuka (details/summary), bukan
+  // langsung saat panel Pengaturan dibuka -- supaya tidak ada request
+  // yang tidak perlu kalau admin cuma mau lihat kategori lain.
+  const detailsLog = document.querySelectorAll('#panelPengaturan details')[5];
+  if (detailsLog) {
+    detailsLog.addEventListener('toggle', () => {
+      if (detailsLog.open && !sudahMuatLog) { sudahMuatLog = true; muatLogAktivitas_(); }
+    });
+  }
 
-      // Log Aktivitas dimuat saat kategori 6 dibuka (details/summary), bukan
-      // langsung saat panel Pengaturan dibuka -- supaya tidak ada request
-      // yang tidak perlu kalau admin cuma mau lihat kategori lain.
-      const detailsLog = document.querySelectorAll('#panelPengaturan details')[5];
-      if (detailsLog) {
-        detailsLog.addEventListener('toggle', () => {
-          if (detailsLog.open && !sudahMuatLog) { sudahMuatLog = true; muatLogAktivitas_(); }
-        });
-      }
-
-      document.getElementById('btnSimpanPortal').addEventListener('click', () => {
-        simpan_({ NAMA_PORTAL: document.getElementById('inputNamaPortal').value.trim() }, 'Nama Portal disimpan.');
-      });
-      document.getElementById('btnSimpanNotif').addEventListener('click', () => {
-        const target = document.getElementById('inputTargetDefaultNotif').value;
-        simpan_({ TEMPLATE_NOTIFIKASI_DEFAULT: document.getElementById('inputTemplateNotif').value, TARGET_DEFAULT_NOTIF: target }, 'Template & target notifikasi disimpan.');
-        window.sppgTargetDefault = target;
-      });
-      document.getElementById('btnSimpanSistem').addEventListener('click', () => {
-        simpan_({ TIMEZONE_SISTEM: document.getElementById('inputTimezone').value }, 'Zona waktu disimpan.');
-      });
-    }, 300);
-  });
+  const btnSimpanPortal = document.getElementById('btnSimpanPortal');
+  if (btnSimpanPortal) {
+    btnSimpanPortal.addEventListener('click', () => {
+      simpan_({ NAMA_PORTAL: document.getElementById('inputNamaPortal').value.trim() }, 'Nama Portal disimpan.');
+    });
+  }
+  const btnSimpanNotif = document.getElementById('btnSimpanNotif');
+  if (btnSimpanNotif) {
+    btnSimpanNotif.addEventListener('click', () => {
+      const target = document.getElementById('inputTargetDefaultNotif').value;
+      simpan_({ TEMPLATE_NOTIFIKASI_DEFAULT: document.getElementById('inputTemplateNotif').value, TARGET_DEFAULT_NOTIF: target }, 'Template & target notifikasi disimpan.');
+      window.sppgTargetDefault = target;
+    });
+  }
+  const btnSimpanSistem = document.getElementById('btnSimpanSistem');
+  if (btnSimpanSistem) {
+    btnSimpanSistem.addEventListener('click', () => {
+      simpan_({ TIMEZONE_SISTEM: document.getElementById('inputTimezone').value }, 'Zona waktu disimpan.');
+    });
+  }
 })();

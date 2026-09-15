@@ -92,9 +92,32 @@ function logDebug_(label, action, extra) {
 }
 
 /**
+ * Ambil cuplikan yang paling INFORMATIF dari respons HTML/teks yang gagal
+ * di-parse sebagai JSON. Ditemukan (lihat laporan gas_error proyek lain
+ * yang mengalami hal sama di script.google.com) bahwa saat Google Apps
+ * Script Web App gagal merespons normal, 160 karakter PERTAMA biasanya
+ * cuma boilerplate skrip anti-bot Google ("window['ppConfig']...") yang
+ * TIDAK menjelaskan apa-apa ke pengguna/developer. Judul halaman (<title>)
+ * hampir selalu berisi alasan aslinya (mis. "Terjadi error", "Too many
+ * requests", "Authorization required") jadi diprioritaskan kalau ada.
+ */
+function cuplikanRespon_(teksMentah) {
+  const judul = /<title[^>]*>([^<]*)<\/title>/i.exec(teksMentah || '');
+  if (judul && judul[1] && judul[1].trim()) {
+    return judul[1].trim();
+  }
+  return (teksMentah || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+}
+
+/**
  * Memanggil aksi GET pada Google Apps Script Web App.
  * GET bersifat hanya-baca sehingga aman di-retry otomatis (maks 2x) kalau
  * gagal karena jaringan/timeout — bukan karena error dari server itu sendiri.
+ * Respons yang gagal di-parse sebagai JSON (Google Apps Script kadang
+ * mengembalikan halaman HTML alih-alih JSON saat sedang bermasalah
+ * sesaat) JUGA di-retry dengan cara yang sama, karena ini hampir selalu
+ * sementara, bukan bug pada kode website ini — aman diulang karena GET
+ * hanya baca data, tidak menulis apa pun.
  * @param {string} action nama aksi, mis. "getDivisi"
  * @param {object} [params] parameter tambahan (query string)
  */
@@ -134,10 +157,15 @@ async function apiGet(action, params, _attempt) {
   try {
     json = JSON.parse(teksMentah);
   } catch (err) {
-    const cuplikan = teksMentah.replace(/\s+/g, ' ').trim().slice(0, 160);
+    const cuplikan = cuplikanRespon_(teksMentah);
     logDebug_('RAW_RESPONSE', action, cuplikan);
     if (/authorization|permission|accounts\.google\.com|sign in/i.test(cuplikan)) {
       throw new Error('Server perlu otorisasi ulang oleh Admin (buka Apps Script sekali, klik Run pada salah satu fungsi, izinkan aksesnya). Detail: ' + cuplikan);
+    }
+    if (attempt < 3) {
+      logDebug_('RETRY_RAW_RESPONSE', action, 'percobaan ke-' + (attempt + 1));
+      await new Promise(r => setTimeout(r, 600 * attempt)); // backoff singkat
+      return apiGet(action, params, attempt + 1);
     }
     throw new Error('Server memberikan respons yang tidak bisa dibaca. Cuplikan: "' + (cuplikan || '(kosong)') + '"');
   }
@@ -183,12 +211,12 @@ async function apiPost(action, payload, timeoutMs, pesanTimeoutKustom) {
   try {
     json = JSON.parse(teksMentah);
   } catch (err) {
-    const cuplikan = teksMentah.replace(/\s+/g, ' ').trim().slice(0, 160);
+    const cuplikan = cuplikanRespon_(teksMentah);
     logDebug_('RAW_RESPONSE', action, cuplikan);
     if (/authorization|permission|accounts\.google\.com|sign in/i.test(cuplikan)) {
       throw new Error('Server perlu otorisasi ulang oleh Admin (buka Apps Script sekali, klik Run pada salah satu fungsi, izinkan aksesnya). Detail: ' + cuplikan);
     }
-    throw new Error('Server memberikan respons yang tidak bisa dibaca. Cuplikan: "' + (cuplikan || '(kosong)') + '"');
+    throw new Error('Server memberikan respons yang tidak bisa dibaca. Cuplikan: "' + (cuplikan || '(kosong)') + '" — Data KEMUNGKINAN sudah tersimpan di server meski responsnya rusak; periksa dulu sebelum mengulang.');
   }
   logDebug_('OK', action, (Date.now() - mulai) + 'ms');
   if (!json.success) throw new Error(json.message || 'Terjadi kesalahan pada server.');

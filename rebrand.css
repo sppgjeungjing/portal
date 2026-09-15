@@ -301,8 +301,31 @@
   justify-self: center;
 }
 /* Header Portal PENGELOLA khusus: logo sedikit lebih ke kiri dari center
-   (beda dari Header Relawan yang center penuh) -- sesuai spesifikasi. */
-body.shell-pengelola .shell-topbar-brand--portal { justify-self: start; margin-left: 12%; }
+   (beda dari Header Relawan yang center penuh) -- sesuai spesifikasi.
+   PERBAIKAN: sebelumnya pakai margin-left:12% (persentase dari lebar
+   kolom kontennya sendiri) + justify-self:start -- ini membuat kolom
+   tengah pada grid melebar tak terduga dan "memakan" jatah ruang kolom
+   kanan (lonceng + ikon pengaturan), beda-beda besarnya di tiap ukuran
+   layar HP sehingga kadang bertabrakan/terlihat kecil. Diganti dengan
+   rasio kolom grid (1fr auto 1.25fr) -- proporsional terhadap lebar
+   layar yang tersedia, jadi selalu aman di HP kecil maupun besar dan
+   TIDAK PERNAH mengambil ruang kolom kanan. */
+body.shell-pengelola .shell-topbar:has(.shell-topbar-brand--portal) {
+  grid-template-columns: 1fr auto 1.25fr;
+}
+body.shell-pengelola .shell-topbar-brand--portal { justify-self: center; margin-left: 0; }
+
+/* Lonceng Notifikasi & tombol Pengaturan di topbar admin memakai class
+   .admin-tab-btn (dipakai JS untuk switch panel) yang secara default
+   punya padding besar (9px 16px) untuk tombol tab pill -- di lingkaran
+   38px/34px ini padding tsb menyita nyaris semua ruang (box-sizing:
+   border-box) sehingga ikon di dalamnya tampil kecil/bergeser. Kembalikan
+   padding & font-size supaya lingkarannya bersih seperti di header relawan. */
+.shell-topbar-bell.admin-tab-btn,
+.shell-topbar-avatar.admin-tab-btn {
+  padding: 0;
+  font-size: inherit;
+}
 .shell-topbar:has(.shell-topbar-brand--portal) .shell-topbar-right {
   justify-self: end;
 }
