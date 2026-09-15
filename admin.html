@@ -698,10 +698,23 @@
 
     <!-- PENUGASAN KHUSUS -->
     <div class="shift-sub" id="shiftSubKhusus" style="display:none;">
-      <p style="font-size:12.5px;color:var(--color-text-muted);margin:-4px 0 12px;">Override jam untuk 1 relawan pada 1 tanggal operasional tertentu — prioritasnya di atas Shift Divisi.</p>
+      <p style="font-size:12.5px;color:var(--color-text-muted);margin:-4px 0 12px;">Override jam untuk relawan pada tanggal operasional tertentu — prioritasnya di atas Shift Divisi. Bisa untuk 1 relawan/1 hari, atau sekaligus 1 divisi penuh/1 periode penuh (tetap tersimpan per orang per hari, bisa diedit/dihapus satu-satu setelahnya).</p>
       <form class="inline-form" id="formPenugasanKhusus" style="flex-direction:column;align-items:stretch;">
-        <select id="khususOperasional" required><option value="">Pilih Tanggal Operasional...</option></select>
-        <select id="khususRelawan" required><option value="">Pilih Relawan...</option></select>
+
+        <div style="display:flex;gap:6px;">
+          <button type="button" class="btn-mini primary" id="khususModeTanggalHari" data-mode-tanggal="hari" style="flex:1;">Satu Hari</button>
+          <button type="button" class="btn-mini" id="khususModeTanggalPeriode" data-mode-tanggal="periode" style="flex:1;">Satu Periode Penuh</button>
+        </div>
+        <select id="khususOperasional"><option value="">Pilih Tanggal Operasional...</option></select>
+        <select id="khususPeriode" style="display:none;"><option value="">Pilih Periode...</option></select>
+
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button type="button" class="btn-mini primary" id="khususModeRelawanIndividu" data-mode-relawan="individu" style="flex:1;">Individu</button>
+          <button type="button" class="btn-mini" id="khususModeRelawanDivisi" data-mode-relawan="divisi" style="flex:1;">Per Divisi</button>
+        </div>
+        <select id="khususRelawan"><option value="">Pilih Relawan...</option></select>
+        <select id="khususDivisi" style="display:none;"><option value="">Pilih Divisi...</option></select>
+
         <div style="display:flex;gap:8px;">
           <input type="time" id="khususJamMasuk" required style="flex:1;">
           <input type="time" id="khususJamPulang" style="flex:1;">

@@ -22,7 +22,13 @@
 
     formPenugasanKhusus: document.getElementById('formPenugasanKhusus'),
     khususOperasional: document.getElementById('khususOperasional'),
+    khususPeriode: document.getElementById('khususPeriode'),
+    khususModeTanggalHari: document.getElementById('khususModeTanggalHari'),
+    khususModeTanggalPeriode: document.getElementById('khususModeTanggalPeriode'),
     khususRelawan: document.getElementById('khususRelawan'),
+    khususDivisi: document.getElementById('khususDivisi'),
+    khususModeRelawanIndividu: document.getElementById('khususModeRelawanIndividu'),
+    khususModeRelawanDivisi: document.getElementById('khususModeRelawanDivisi'),
     khususJamMasuk: document.getElementById('khususJamMasuk'),
     khususJamPulang: document.getElementById('khususJamPulang'),
     khususCatatan: document.getElementById('khususCatatan'),
@@ -36,7 +42,7 @@
 
   if (!el.tabBtn) return;
 
-  const cache = { periode: [], kalender: [], relawan: [] };
+  const cache = { periode: [], kalender: [], relawan: [], divisi: [] };
   let sudahInit = false;
 
   function token() { return window.sppgAdminToken; }
@@ -67,6 +73,7 @@
         apiGet('getKalenderListAdmin', { token: token() })
       ]);
       cache.periode = periode;
+      cache.divisi = divisi;
       cache.relawan = relawan;
       cache.kalender = kalender;
 
@@ -76,6 +83,10 @@
         divisi.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
       el.khususRelawan.innerHTML = '<option value="">Pilih Relawan...</option>' +
         relawan.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.nama)}</option>`).join('');
+      el.khususDivisi.innerHTML = '<option value="">Pilih Divisi...</option>' +
+        divisi.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+      el.khususPeriode.innerHTML = '<option value="">Pilih Periode...</option>' +
+        periode.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.nama)}</option>`).join('');
       el.koreksiRelawan.innerHTML = '<option value="">Pilih Relawan...</option>' +
         relawan.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.nama)}</option>`).join('');
       el.khususOperasional.innerHTML = '<option value="">Pilih Tanggal Operasional...</option>' +
@@ -84,6 +95,43 @@
       // diam-diam di init awal, pesan error akan muncul saat user benar-benar interaksi
     }
   }
+
+  // --------------------------------------------------------
+  // PENUGASAN KHUSUS -- TOGGLE MODE (Satu Hari/Periode, Individu/Divisi)
+  // --------------------------------------------------------
+  let modeTanggal = 'hari';   // 'hari' | 'periode'
+  let modeRelawan = 'individu'; // 'individu' | 'divisi'
+
+  el.khususModeTanggalHari.addEventListener('click', () => {
+    modeTanggal = 'hari';
+    el.khususModeTanggalHari.classList.add('primary');
+    el.khususModeTanggalPeriode.classList.remove('primary');
+    el.khususOperasional.style.display = '';
+    el.khususPeriode.style.display = 'none';
+    muatPenugasanKhusus();
+  });
+  el.khususModeTanggalPeriode.addEventListener('click', () => {
+    modeTanggal = 'periode';
+    el.khususModeTanggalPeriode.classList.add('primary');
+    el.khususModeTanggalHari.classList.remove('primary');
+    el.khususOperasional.style.display = 'none';
+    el.khususPeriode.style.display = '';
+    el.tbodyPenugasanKhusus.innerHTML = '<tr><td colspan="5"><div class="empty-state">Daftar di bawah menampilkan penugasan per hari. Pilih "Satu Hari" untuk melihat daftarnya, atau lanjutkan di sini untuk membuat penugasan ke seluruh periode sekaligus.</div></td></tr>';
+  });
+  el.khususModeRelawanIndividu.addEventListener('click', () => {
+    modeRelawan = 'individu';
+    el.khususModeRelawanIndividu.classList.add('primary');
+    el.khususModeRelawanDivisi.classList.remove('primary');
+    el.khususRelawan.style.display = '';
+    el.khususDivisi.style.display = 'none';
+  });
+  el.khususModeRelawanDivisi.addEventListener('click', () => {
+    modeRelawan = 'divisi';
+    el.khususModeRelawanDivisi.classList.add('primary');
+    el.khususModeRelawanIndividu.classList.remove('primary');
+    el.khususRelawan.style.display = 'none';
+    el.khususDivisi.style.display = '';
+  });
 
   // --------------------------------------------------------
   // SHIFT DIVISI
@@ -175,18 +223,50 @@
 
   el.formPenugasanKhusus.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    const payload = {
+      token: token(),
+      jamMasuk: el.khususJamMasuk.value,
+      jamPulang: el.khususJamPulang.value,
+      catatan: el.khususCatatan.value.trim()
+    };
+
+    if (modeTanggal === 'periode') {
+      if (!el.khususPeriode.value) { showError('Pilih Periode dulu.'); return; }
+      payload.idPeriode = el.khususPeriode.value;
+    } else {
+      if (!el.khususOperasional.value) { showError('Pilih Tanggal Operasional dulu.'); return; }
+      payload.idOperasional = el.khususOperasional.value;
+    }
+
+    if (modeRelawan === 'divisi') {
+      if (!el.khususDivisi.value) { showError('Pilih Divisi dulu.'); return; }
+      payload.namaDivisi = el.khususDivisi.value;
+    } else {
+      if (!el.khususRelawan.value) { showError('Pilih Relawan dulu.'); return; }
+      payload.idRelawan = el.khususRelawan.value;
+    }
+
+    // Konfirmasi kalau salah satu (atau keduanya) mode bulk aktif -- supaya
+    // tidak ada yang tidak sengaja menugaskan seluruh divisi/periode.
+    if (modeTanggal === 'periode' || modeRelawan === 'divisi') {
+      const namaPeriode = modeTanggal === 'periode' ? (cache.periode.find(p => p.id === el.khususPeriode.value) || {}).nama : null;
+      const keterangan = [
+        modeTanggal === 'periode' ? `seluruh hari di periode "${namaPeriode || el.khususPeriode.value}"` : 'tanggal yang dipilih',
+        modeRelawan === 'divisi' ? `seluruh relawan aktif di divisi "${el.khususDivisi.value}"` : 'relawan yang dipilih'
+      ];
+      if (!confirm(`Ini akan membuat/memperbarui penugasan khusus untuk ${keterangan[1]}, pada ${keterangan[0]}. Lanjutkan?`)) return;
+    }
+
     try {
-      await apiPost('addPenugasanKhusus', {
-        token: token(),
-        idOperasional: el.khususOperasional.value,
-        idRelawan: el.khususRelawan.value,
-        jamMasuk: el.khususJamMasuk.value,
-        jamPulang: el.khususJamPulang.value,
-        catatan: el.khususCatatan.value.trim()
-      });
-      showSuccess('Penugasan khusus tersimpan.');
+      const hasil = await apiPost('addPenugasanKhususBulk', payload);
+      if (hasil.jumlah === 1) {
+        showSuccess('Penugasan khusus tersimpan.');
+      } else {
+        showSuccess(`Penugasan khusus tersimpan untuk ${hasil.jumlah} kombinasi relawan/hari (${hasil.jumlahBaru} baru, ${hasil.jumlahDiperbarui} diperbarui).`);
+      }
       el.khususJamMasuk.value = ''; el.khususJamPulang.value = ''; el.khususCatatan.value = '';
-      muatPenugasanKhusus();
+      if (modeTanggal === 'hari') muatPenugasanKhusus();
     } catch (err) {
       showError(err.message);
     }

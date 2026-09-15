@@ -290,16 +290,17 @@
   // ===== ROLE STAFF (akses monitoring) =====
   // Panel yang TIDAK ditampilkan untuk role Staff -- semuanya panel yang
   // berisi pengelolaan data (tulis) atau data sensitif (akun/personel).
-  // Dashboard, Rekap Harian, Rekap 2 Minggu, dan Bantuan SENGAJA TIDAK ada
-  // di daftar ini (tetap tampil) -- itu yang disepakati sebagai akses
-  // monitoring Staff. Stok & SIPANDU juga disembunyikan dari Staff karena
-  // keduanya punya sistem izin akses sendiri yang terpisah dari role
-  // Admin/Staff ini -- tanpa izin itu, tab-nya akan jadi jalan buntu.
+  // Dashboard, Rekap Harian, Rekap 2 Minggu, Bantuan, Stok & Persediaan,
+  // dan SIPANDU SENGAJA TIDAK ada di daftar ini (tetap tampil) -- Stok &
+  // SIPANDU diberi akses penuh untuk Staff (lewat requireStokAccess_ &
+  // requireSipanduPermission_), TAPI pengaturan Kategori/Tambah-Edit
+  // Barang/Hak Akses di dalamnya tetap Admin-only lewat requireStokAdmin_
+  // & SipanduHakAkses.gs yang tidak disentuh.
   const PANEL_KHUSUS_ADMIN = [
     'panelRelawan', 'panelAkun', 'panelDivisi', 'panelRoleAkses', 'panelPengelolaSppg',
-    'panelPeriode', 'panelKalender', 'panelLokasi', 'panelShift', 'panelStok',
+    'panelPeriode', 'panelKalender', 'panelLokasi', 'panelShift',
     'panelNotifikasiAdmin', 'panelInformasi', 'panelPengumuman', 'panelDokumen',
-    'panelLaporan', 'panelHakAksesSipandu', 'panelWebsitePublik', 'panelPengaturan'
+    'panelLaporan', 'panelWebsitePublik', 'panelPengaturan'
   ];
 
   function terapkanBatasanRoleStaff_() {

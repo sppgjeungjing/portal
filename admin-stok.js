@@ -125,6 +125,17 @@
     } catch (err) {
       // Diam-diam saja di init awal -- pesan error akan tetap muncul saat user benar-benar buka tab Stok.
     }
+    // Staff: lihat-lihat saja di modul Stok, tidak bisa mencatat transaksi
+    // (ditegakkan juga di backend -- ini cuma supaya tombolnya tidak jadi
+    // jalan buntu kalau diklik).
+    if (window.sppgAdminRole === 'STAFF') {
+      [el.btnSimpanMasuk, el.btnSimpanKeluar].forEach(btn => {
+        if (!btn) return;
+        btn.disabled = true;
+        btn.textContent = 'Khusus Admin/Petugas Stok';
+        btn.title = 'Akun Staff hanya bisa melihat data Stok, tidak bisa mencatat transaksi.';
+      });
+    }
   }
 
   // --------------------------------------------------------
