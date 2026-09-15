@@ -236,6 +236,12 @@
       // BARU (modul Pengelola SPPG): username juga di-expose, supaya modul
       // itu bisa deteksi "ini akun saya sendiri" (cegah nonaktifkan diri sendiri di UI).
       window.sppgAdminUsername = data.username;
+      // BARU (role Staff -- akses monitoring): PEMBATASAN SESUNGGUHNYA
+      // ditegakkan di backend (requireAuth menolak Staff untuk aksi yang
+      // bukan monitoring) -- ini HANYA menyembunyikan menu yang memang
+      // tidak bisa dipakai Staff, supaya tidak ada menu "mati" di UI.
+      window.sppgAdminRole = data.role || 'ADMIN';
+      terapkanBatasanRoleStaff_();
       window.dispatchEvent(new CustomEvent('sppg-admin-ready'));
       el.loginWrap.classList.add('is-hidden');
       el.dashboardWrap.classList.remove('is-hidden');
@@ -279,6 +285,38 @@
   /** Sama seperti emptyOrErrorHtml, tapi dibungkus <tr><td colspan> untuk isi tbody tabel. */
   function emptyOrErrorRow(key, colspan, pesanKosong) {
     return `<tr><td colspan="${colspan}">${emptyOrErrorHtml(key, pesanKosong)}</td></tr>`;
+  }
+
+  // ===== ROLE STAFF (akses monitoring) =====
+  // Panel yang TIDAK ditampilkan untuk role Staff -- semuanya panel yang
+  // berisi pengelolaan data (tulis) atau data sensitif (akun/personel).
+  // Dashboard, Rekap Harian, Rekap 2 Minggu, dan Bantuan SENGAJA TIDAK ada
+  // di daftar ini (tetap tampil) -- itu yang disepakati sebagai akses
+  // monitoring Staff. Stok & SIPANDU juga disembunyikan dari Staff karena
+  // keduanya punya sistem izin akses sendiri yang terpisah dari role
+  // Admin/Staff ini -- tanpa izin itu, tab-nya akan jadi jalan buntu.
+  const PANEL_KHUSUS_ADMIN = [
+    'panelRelawan', 'panelAkun', 'panelDivisi', 'panelRoleAkses', 'panelPengelolaSppg',
+    'panelPeriode', 'panelKalender', 'panelLokasi', 'panelShift', 'panelStok',
+    'panelNotifikasiAdmin', 'panelInformasi', 'panelPengumuman', 'panelDokumen',
+    'panelLaporan', 'panelHakAksesSipandu', 'panelWebsitePublik', 'panelPengaturan'
+  ];
+
+  function terapkanBatasanRoleStaff_() {
+    if (window.sppgAdminRole !== 'STAFF') return;
+    PANEL_KHUSUS_ADMIN.forEach(panelId => {
+      const tab = document.querySelector('.admin-tab-btn[data-panel="' + panelId + '"]');
+      if (tab) tab.style.display = 'none';
+    });
+    // Penanda kecil supaya jelas kenapa menunya lebih sedikit -- bukan error/bug.
+    const brandBlock = document.querySelector('.shell-sidebar-head-text');
+    if (brandBlock && !document.getElementById('badgeRoleStaff')) {
+      const badge = document.createElement('p');
+      badge.id = 'badgeRoleStaff';
+      badge.textContent = 'Staff — akses monitoring';
+      badge.style.cssText = 'font-size:11px;font-weight:700;color:#b9852f;margin:2px 0 0;';
+      brandBlock.appendChild(badge);
+    }
   }
 
   // ===== TABS =====
@@ -473,7 +511,7 @@
     const tanggal = toTanggalIndo(el.filterTanggal.value);
     showLoading('Memuat rekap harian...');
     try {
-      const res = await apiGet('getRekapHarian', { tanggal });
+      const res = await apiGet('getRekapHarian', { tanggal, token: authToken });
       cache.rekapHarian = res.data;
       renderStatCards(cache.rekapHarian);
       renderDivisiGrid(cache.rekapHarian);
@@ -585,7 +623,8 @@
     try {
       const res = await apiGet('getRekapDuaMinggu', {
         periodeAwal: el.filterPeriodeAwal.value,
-        periodeAkhir: el.filterPeriodeAkhir.value
+        periodeAkhir: el.filterPeriodeAkhir.value,
+        token: authToken
       });
       cache.rekapDuaMinggu = res.data;
       renderRekapDuaMingguTable();
