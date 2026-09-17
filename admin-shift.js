@@ -303,7 +303,10 @@
             <div class="profile-identity-row"><span>Tanggal Operasional Saat Ini</span><span>${escapeHtml(h.tanggalTercatatSaatIni)}</span></div>
           </div>
           <select id="koreksiTujuan${i}">${opsiTujuan}</select>
-          <button type="button" class="btn-mini primary" style="margin-top:8px;" data-koreksi-jenis="${escapeHtml(h.jenis)}" data-koreksi-tujuan-idx="${i}">Koreksi ke Tanggal Ini</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn-mini primary" style="margin-top:8px;" data-koreksi-jenis="${escapeHtml(h.jenis)}" data-koreksi-tujuan-idx="${i}">Koreksi ke Tanggal Ini</button>
+            <button type="button" class="btn-mini" style="margin-top:8px;color:#b23a3a;" data-hapus-jenis="${escapeHtml(h.jenis)}">🗑️ Hapus Baris Ini</button>
+          </div>
         </div>`).join('');
 
       el.koreksiHasil.querySelectorAll('[data-koreksi-jenis]').forEach(btn => {
@@ -317,6 +320,24 @@
               tanggalLama: tanggalPresensi, idOperasionalBaru
             });
             showSuccess('Berhasil dikoreksi ke ' + hasilKoreksi.tanggalBaru + '.');
+            el.btnCariKoreksi.click();
+          } catch (err) {
+            showError(err.message);
+          }
+        });
+      });
+
+      el.koreksiHasil.querySelectorAll('[data-hapus-jenis]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          // PERINGATAN GANDA (bukan cuma 1 confirm) -- ini penghapusan
+          // permanen, dipakai antara lain untuk membuang data test yang
+          // menempati slot operasional relawan asli (lihat error "Anda
+          // sudah melakukan absensi masuk pada operasional ini.").
+          if (!confirm('HAPUS PERMANEN absensi ' + btn.dataset.hapusJenis + ' ini? Tindakan ini tidak bisa dibatalkan.')) return;
+          if (!confirm('Konfirmasi sekali lagi: baris ini akan hilang selamanya dari 03_DATA_ABSENSI. Lanjutkan?')) return;
+          try {
+            await apiPost('hapusAbsensi', { token: token(), idRelawan, jenis: btn.dataset.hapusJenis, tanggal: tanggalPresensi });
+            showSuccess('Baris absensi berhasil dihapus.');
             el.btnCariKoreksi.click();
           } catch (err) {
             showError(err.message);
