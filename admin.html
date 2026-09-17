@@ -1144,6 +1144,16 @@
         </div>
       </div>
     </details>
+
+    <!-- 7. PEMULIHAN ID RELAWAN (dipakai kalau ID_RELAWAN pernah diedit langsung di sheet) -->
+    <details class="panel-block" style="margin:14px 0;border-color:#b9852f;">
+      <summary style="cursor:pointer;font-weight:700;color:#b9852f;font-size:14px;">7. ⚠️ Pemulihan ID Relawan (khusus kalau ada ID yang diedit langsung di Spreadsheet)</summary>
+      <div style="margin-top:12px;">
+        <p style="font-size:12.5px;color:var(--color-text-muted);margin:0 0 12px;">Pakai ini KALAU relawan tidak bisa login ("Data relawan tidak aktif") setelah kolom ID_RELAWAN di sheet 01_DATA_RELAWAN diedit/diganti langsung. Sistem akan mengusulkan pemetaan ID LAMA → ID BARU berdasarkan kecocokan nama di riwayat presensi. <strong>Wajib ditinjau dulu di sini sebelum diterapkan</strong> — tidak ada yang otomatis berubah sampai Anda menekan tombol Terapkan.</p>
+        <button type="button" class="btn-outline" id="btnMuatPemetaanId">🔍 Cari Pemetaan ID yang Perlu Diperbaiki</button>
+        <div id="hasilPemetaanId" style="margin-top:14px;"></div>
+      </div>
+    </details>
   </div>
       </main>
       <footer class="shell-footer">
