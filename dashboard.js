@@ -72,8 +72,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('heroIdDivisi').textContent = (d.identitas.id || '–') + ' • ' + (d.identitas.divisi || '–');
 
     // ---- KOTAK INFORMASI OPERASIONAL ----
-    const namaHari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][new Date().getDay()];
-    const tglFormat = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    // PERBAIKAN: sebelumnya tanggal SELALU dihitung dari jam HP/laptop
+    // masing-masing (new Date()), padahal statusOperasional dari backend
+    // sekarang bisa merujuk BESOK (shift malam yang sudah masuk jendela
+    // waktunya) -- backend & tampilan jadi tidak sinkron. Sekarang pakai
+    // tanggal/hari yang backend kirim (sudah shift-aware, sama dgn yang
+    // dipakai "Jadwal Saya" di bawah), fallback ke tanggal hari ini kalau
+    // backend tidak mengirimkannya (mis. status LIBUR).
+    let namaHari, tglFormat;
+    if (d.statusOperasional.tanggal && d.statusOperasional.hari) {
+      namaHari = d.statusOperasional.hari;
+      const bagianTgl = String(d.statusOperasional.tanggal).split('/'); // DD/MM/YYYY
+      const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      tglFormat = bagianTgl.length === 3
+        ? (parseInt(bagianTgl[0], 10) + ' ' + namaBulan[parseInt(bagianTgl[1], 10) - 1] + ' ' + bagianTgl[2])
+        : d.statusOperasional.tanggal;
+    } else {
+      namaHari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][new Date().getDay()];
+      tglFormat = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
     document.getElementById('infoOperasionalTanggal').textContent = '📅 ' + namaHari + ', ' + tglFormat;
     document.getElementById('infoOperasionalStatus').textContent = d.statusOperasional.label;
 
