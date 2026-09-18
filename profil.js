@@ -100,12 +100,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       main.style.display = 'block';
     } catch (err) {
       hideLoading();
-      // Sesi kedaluwarsa ATAU akun baru saja dinonaktifkan Admin → kembali ke
-      // login, tapi bawa pesannya supaya relawan tahu alasannya, bukan
-      // tampilan form kosong yang membingungkan.
-      hapusSesiRelawan();
-      simpanNotisLogin(err.message || 'Sesi telah berakhir. Silakan login kembali.');
-      window.location.href = 'login.html';
+      // OPTIMASI: sebelumnya SEMUA error (termasuk gangguan jaringan
+      // biasa) langsung dianggap "sesi berakhir". Sekarang dibedakan --
+      // cuma redirect ke Login kalau pesannya memang menandakan sesi
+      // tidak valid/berakhir, bukan untuk error jaringan/timeout biasa.
+      if (apakahErrorSesiTidakValid(err.message)) {
+        hapusSesiRelawan();
+        simpanNotisLogin(err.message || 'Sesi telah berakhir. Silakan login kembali.');
+        window.location.href = 'login.html';
+        return;
+      }
+      showError(err.message || 'Gagal memuat profil.');
+      main.innerHTML = `
+        <div class="empty-state" style="padding:40px 20px;text-align:center;">
+          <p style="margin:0 0 12px;font-size:14px;color:#55606f;">Data belum dapat dimuat. Periksa koneksi internet Anda.</p>
+          <button type="button" id="btnCobaLagiProfil" class="btn-outline">↻ Coba Lagi</button>
+        </div>`;
+      main.style.display = 'block';
+      const btnCobaLagi = document.getElementById('btnCobaLagiProfil');
+      if (btnCobaLagi) btnCobaLagi.addEventListener('click', () => window.location.reload());
     }
   }
 

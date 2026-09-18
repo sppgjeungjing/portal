@@ -194,6 +194,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     main.style.display = 'block';
   } catch (err) {
     hideLoading();
+    // OPTIMASI: bedakan SESSION INVALID dari NETWORK ERROR -- sebelumnya
+    // keduanya ditangani SAMA (tombol "Coba Lagi" generik), padahal kalau
+    // sesinya memang sudah berakhir, "Coba Lagi" hanya akan mengulang
+    // request dengan token yang SAMA-SAMA tidak valid, gagal terus tanpa
+    // pernah mengarahkan relawan untuk login ulang.
+    if (typeof apakahErrorSesiTidakValid === 'function' && apakahErrorSesiTidakValid(err.message)) {
+      hapusSesiRelawan();
+      window.location.href = 'login.html';
+      return;
+    }
     showError(err.message || 'Gagal memuat dashboard.');
     // FASE 2: sebelumnya dashboardMain TETAP display:none kalau pemuatan
     // gagal -- toast error hilang setelah beberapa detik dan pengguna

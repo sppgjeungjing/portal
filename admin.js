@@ -211,6 +211,32 @@
     }
   });
 
+  /**
+   * Dipakai BERSAMA oleh login manual (submit handler di bawah) DAN
+   * pulihkanSesiAdmin_ (restore sesi setelah refresh, di akhir file) --
+   * supaya keduanya konsisten, tidak ada logic yang terpisah/berisiko
+   * berbeda sendiri-sendiri seiring waktu.
+   */
+  function masukKeDashboard_(token, username, role) {
+    authToken = token;
+    // BARU (modul Stok): expose token secara terbatas ke luar closure ini,
+    // supaya admin-stok.js (file terpisah, tidak mengubah logic admin.js
+    // yang sudah ada) bisa memakai sesi admin yang sama tanpa login ulang.
+    window.sppgAdminToken = authToken;
+    // BARU (modul Pengelola SPPG): username juga di-expose, supaya modul
+    // itu bisa deteksi "ini akun saya sendiri" (cegah nonaktifkan diri sendiri di UI).
+    window.sppgAdminUsername = username;
+    // BARU (role Staff -- akses monitoring): PEMBATASAN SESUNGGUHNYA
+    // ditegakkan di backend (requireAuth menolak Staff untuk aksi yang
+    // bukan monitoring) -- ini HANYA menyembunyikan menu yang memang
+    // tidak bisa dipakai Staff, supaya tidak ada menu "mati" di UI.
+    window.sppgAdminRole = role || 'ADMIN';
+    terapkanBatasanRoleStaff_();
+    window.dispatchEvent(new CustomEvent('sppg-admin-ready'));
+    el.loginWrap.classList.add('is-hidden');
+    el.dashboardWrap.classList.remove('is-hidden');
+  }
+
   el.loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     el.loginError.textContent = '';
@@ -228,23 +254,21 @@
         showLoading('Koneksi lambat, mencoba sekali lagi...');
         data = await apiPost('login', { username: usernameInput, password: passwordInput }, undefined, 'Koneksi ke server lambat. Periksa internet Anda dan coba masuk lagi.');
       }
-      authToken = data.token;
-      // BARU (modul Stok): expose token secara terbatas ke luar closure ini,
-      // supaya admin-stok.js (file terpisah, tidak mengubah logic admin.js
-      // yang sudah ada) bisa memakai sesi admin yang sama tanpa login ulang.
-      window.sppgAdminToken = authToken;
-      // BARU (modul Pengelola SPPG): username juga di-expose, supaya modul
-      // itu bisa deteksi "ini akun saya sendiri" (cegah nonaktifkan diri sendiri di UI).
-      window.sppgAdminUsername = data.username;
-      // BARU (role Staff -- akses monitoring): PEMBATASAN SESUNGGUHNYA
-      // ditegakkan di backend (requireAuth menolak Staff untuk aksi yang
-      // bukan monitoring) -- ini HANYA menyembunyikan menu yang memang
-      // tidak bisa dipakai Staff, supaya tidak ada menu "mati" di UI.
-      window.sppgAdminRole = data.role || 'ADMIN';
-      terapkanBatasanRoleStaff_();
-      window.dispatchEvent(new CustomEvent('sppg-admin-ready'));
-      el.loginWrap.classList.add('is-hidden');
-      el.dashboardWrap.classList.remove('is-hidden');
+      // BARU (session persistence): simpan token (BUKAN password) di
+      // localStorage lewat auth-admin.js -- pola SAMA seperti
+      // auth-relawan.js. Ini yang membuat refresh/buka ulang halaman
+      // TIDAK perlu login ulang selama sesi di server masih berlaku
+      // (lihat pulihkanSesiAdmin_ di akhir file).
+      simpanSesiAdmin({ token: data.token, username: data.username, role: data.role || 'ADMIN' });
+      masukKeDashboard_(data.token, data.username, data.role);
+      // Overlay "Memeriksa akun..." berhenti DI SINI -- begitu auth
+      // berhasil dan shell Dashboard sudah ditampilkan. TIDAK menunggu
+      // initDashboard() selesai memuat data (yang sekarang juga tidak
+      // lagi pakai overlay penuh layar -- tiap kartu render begitu
+      // sumbernya sendiri siap, lihat initDashboard()). `finally` di
+      // bawah TETAP tanpa syarat -- kalau initDashboard() melempar error
+      // tak terduga, overlay tetap pasti hilang, tidak menggantung.
+      hideLoading();
       await initDashboard();
     } catch (err) {
       el.loginError.textContent = err.message || 'Username atau password salah.';
@@ -257,6 +281,7 @@
     const tokenLama = authToken;
     authToken = null;
     window.sppgAdminToken = null; // BARU (modul Stok): ikut dikosongkan saat logout
+    hapusSesiAdmin(); // BARU (session persistence): hapus sesi tersimpan -- logout HARUS tetap logout walau refresh
     el.dashboardWrap.classList.add('is-hidden');
     el.loginWrap.classList.remove('is-hidden');
     el.inputPassword.value = '';
@@ -385,25 +410,50 @@
     { key: 'periodeList', label: 'Periode Kerja', fn: () => apiGet('getPeriodeListAdmin', { token: authToken }) },
     { key: 'kalenderList', label: 'Kalender Operasional', fn: () => apiGet('getKalenderListAdmin', { token: authToken }) },
     { key: 'lokasiList', label: 'Master Lokasi SPPG', fn: () => apiGet('getLokasiListAdmin', { token: authToken }) },
-    { key: 'jadwalList', label: 'Jadwal & Penugasan', fn: () => apiGet('getJadwalListAdmin', { token: authToken }) },
+    // 'jadwalList' (getJadwalListAdmin) SENGAJA DIKELUARKAN dari batch ini --
+    // sumbernya (10_JADWAL) sudah deprecated, panel UI-nya sudah
+    // display:none di nav (label "Jadwal & Penugasan (lama)", lihat
+    // admin.html baris ~98), dan fungsinya sendiri membaca ULANG
+    // 01_DATA_RELAWAN yang sudah diambil di atas (sumber 'relawanList').
+    // Fungsi & render-nya (fillRelawanJadwalSelect/renderJadwalTable)
+    // TIDAK dihapus -- cuma tidak lagi dipicu di sini, sesuai instruksi
+    // "jangan hapus sembarangan sebelum pasti tidak ada pemakainya".
     { key: 'dokumenList', label: 'Dokumen', fn: () => apiGet('getDokumenListAdmin', { token: authToken }) },
     { key: 'notifikasiList', label: 'Notifikasi', fn: () => apiGet('getNotifikasiListAdmin', { token: authToken }) },
     { key: 'pengumumanList', label: 'Pengumuman', fn: () => apiGet('getPengumumanListAdmin', { token: authToken }) },
-    { key: 'dashboardPengelola', label: 'Ringkasan Dashboard', fn: () => apiGet('getDashboardPengelola', { token: authToken }) }
+    // BARU: menggantikan 'dashboardPengelola' (getDashboardPengelola, endpoint
+    // lama yang menggabungkan 6 bagian tak berkaitan jadi 1 response berat).
+    // Key CACHE-nya SENGAJA dipertahankan sama ('dashboardPengelola') supaya
+    // RENDER_UNTUK_KEY & renderOverview() di bawah tidak perlu diubah sama
+    // sekali -- cuma SUMBER datanya yang sekarang jauh lebih ringan (P1-P3 saja).
+    { key: 'dashboardPengelola', label: 'Kehadiran/Jadwal/Kalender', fn: () => apiGet('getDashboardPengelolaRingan', { token: authToken }) },
+    // BARU: P4-P6, masing-masing endpoint SENDIRI -- tidak lagi bisa saling
+    // menahan (mis. Rekap 2 Minggu lambat TIDAK menahan Kehadiran lagi).
+    { key: 'ringkasanAkun', label: 'Ringkasan Akun', fn: () => apiGet('getRingkasanAkunRelawan', { token: authToken }) },
+    { key: 'siragaDashboard', label: 'SIRAGA', fn: () => apiGet('getSiragaDashboard', { token: authToken }) },
+    { key: 'sipanduRingkas', label: 'SIPANDU', fn: () => apiGet('getSipanduDashboardRingkas', { token: authToken }) },
+    { key: 'rekapDuaMingguDashboard', label: 'Rekap 2 Minggu', fn: () => apiGet('getRekapDuaMingguDashboard', { token: authToken }) }
   ];
   const RENDER_UNTUK_KEY = {
-    relawanList: () => { renderRelawanTable(); renderOverview(); },
+    relawanList: renderRelawanTable,
     divisiList: () => { fillDivisiSelects(); renderDivisiTable(); },
-    akunList: () => { renderAkunTable(); renderOverview(); },
+    akunList: renderAkunTable,
     informasiList: renderInformasiAdmin,
     periodeList: () => { fillPeriodeSelects(); renderPeriodeTable(); },
     kalenderList: renderKalenderTable,
     lokasiList: renderLokasiTable,
-    jadwalList: () => { fillRelawanJadwalSelect(); renderJadwalTable(); },
+    jadwalList: () => { fillRelawanJadwalSelect(); renderJadwalTable(); }, // tidak lagi dipicu (jadwalList dikeluarkan dari SUMBER_DASHBOARD) -- entri dipertahankan, tidak dihapus, sesuai instruksi jangan hapus sembarangan
     dokumenList: renderDokumenAdmin,
     notifikasiList: () => { renderNotifikasiAdmin(); renderOverview(); },
     pengumumanList: renderPengumumanAdmin,
-    dashboardPengelola: renderOverview
+    dashboardPengelola: renderOverview,
+    // BARU: 4 sumber P4-P6 yang sekarang independen, masing-masing memicu
+    // renderOverview() sendiri begitu tiba (lihat renderOverview() -- tiap
+    // bagian di dalamnya sudah gated ke sumbernya masing-masing).
+    ringkasanAkun: renderOverview,
+    siragaDashboard: renderOverview,
+    sipanduRingkas: renderOverview,
+    rekapDuaMingguDashboard: renderOverview
   };
 
   /** Muat ulang SATU sumber data saja (dipanggil dari tombol "Coba Lagi" di empty-state error). */
@@ -422,39 +472,8 @@
   };
 
   async function initDashboard() {
-    showLoading('Memuat data dashboard...');
-    const sumber = SUMBER_DASHBOARD;
-
-    const hasil = await Promise.allSettled(sumber.map(s => s.fn()));
-    const gagalDimuat = [];
-    hasil.forEach((r, i) => {
-      const { key, label } = sumber[i];
-      if (r.status === 'fulfilled') {
-        cache[key] = r.value;
-        cache.errors[key] = false;
-      } else {
-        cache[key] = cache[key] || [];
-        cache.errors[key] = true;
-        gagalDimuat.push(label + ' (' + (r.reason && r.reason.message ? r.reason.message : 'gagal dimuat') + ')');
-      }
-    });
-
-    fillDivisiSelects();
-    fillRelawanJadwalSelect();
-    fillPeriodeSelects();
-    renderRelawanTable();
-    renderDivisiTable();
-    renderAkunTable();
-    renderInformasiAdmin();
-    renderPeriodeTable();
-    renderKalenderTable();
-    renderLokasiTable();
-    renderJadwalTable();
-    renderDokumenAdmin();
-    renderNotifikasiAdmin();
-    renderPengumumanAdmin();
-    renderOverview();
-
+    // Nilai default form -- TIDAK bergantung pada data apa pun dari
+    // server, jadi diisi SEGERA, bukan menunggu fetch apa pun selesai.
     const now = new Date();
     el.filterTanggal.value = toDateInputValue(now);
     const periodeDefault = defaultPeriodeDuaMinggu(now);
@@ -462,15 +481,46 @@
     el.filterPeriodeAkhir.value = toDateInputValue(periodeDefault.akhir);
     el.inputTanggalJadwal.value = toDateInputValue(now);
 
-    try {
-      await muatRekapHarian();
-    } catch (err) {
-      gagalDimuat.push('Rekap Harian (' + (err.message || 'gagal dimuat') + ')');
-    }
+    // OPTIMASI: TIDAK ADA LAGI overlay full-screen di sini -- shell
+    // Dashboard SUDAH tampil (dari alur login/pulihkanSesiAdmin_ sebelum
+    // fungsi ini dipanggil), lengkap dengan tampilan default "–" di
+    // tiap kartu. Setiap sumber di bawah me-render DIRINYA SENDIRI
+    // begitu selesai (lewat RENDER_UNTUK_KEY, yang sama dipakai tombol
+    // "Coba Lagi") -- BUKAN menunggu SEMUA sumber baru merender semuanya
+    // sekaligus (pola lama). Kehadiran (prioritas tertinggi, sumber
+    // 'dashboardPengelola', sekarang endpoint RINGAN P1-P3 saja) bisa
+    // tampil begitu siap, tidak lagi terhalang SIRAGA/Rekap/SIPANDU yang
+    // sekarang sudah jadi endpoint terpisah sendiri-sendiri.
+    const semuaPromise = SUMBER_DASHBOARD.map(s =>
+      s.fn()
+        .then(hasil => {
+          cache[s.key] = hasil;
+          cache.errors[s.key] = false;
+          (RENDER_UNTUK_KEY[s.key] || function () {})();
+        })
+        .catch(err => {
+          cache[s.key] = cache[s.key] || [];
+          cache.errors[s.key] = true;
+          (RENDER_UNTUK_KEY[s.key] || function () {})(); // tetap render -- supaya empty-state + tombol "Coba Lagi" muncul, bukan diam kosong
+          return { gagal: true, label: s.label, pesan: (err && err.message) ? err.message : 'gagal dimuat' };
+        })
+    );
 
-    hideLoading();
+    // Promise.all AMAN dipakai di sini (tidak akan reject) -- setiap
+    // promise di atas SUDAH menangani error-nya sendiri lewat .catch.
+    const hasilSemua = await Promise.all(semuaPromise);
+    const gagalDimuat = hasilSemua.filter(h => h && h.gagal).map(h => h.label + ' (' + h.pesan + ')');
+
+    // Rekap Harian TIDAK LAGI menentukan "Dashboard siap" -- dijalankan
+    // di belakang layar, TIDAK di-await sebagai syarat sebelum fungsi ini
+    // dianggap selesai. Kartu Rekap Harian sendiri yang menampilkan
+    // status loading/error-nya masing-masing (lihat muatRekapHarian()).
+    muatRekapHarian().catch(err => {
+      showError('Rekap Harian belum dapat dimuat: ' + (err.message || ''));
+    });
+
     if (gagalDimuat.length) {
-      showError('Sebagian data belum dapat dimuat — modul lain tetap tampil: ' + gagalDimuat.join('; '));
+      showError('Sebagian data belum dapat dimuat — komponen lain tetap tampil: ' + gagalDimuat.join('; '));
     }
   }
 
@@ -510,7 +560,19 @@
   async function muatRekapHarian() {
     if (!el.filterTanggal.value) return;
     const tanggal = toTanggalIndo(el.filterTanggal.value);
-    showLoading('Memuat rekap harian...');
+    // OPTIMASI: showLoading/hideLoading (overlay GLOBAL, menutupi seluruh
+    // layar) DIHAPUS dari sini -- Rekap Harian sekarang bisa dipicu
+    // otomatis di belakang layar saat Dashboard baru dibuka (lihat
+    // initDashboard()), jadi TIDAK BOLEH lagi memblokir seluruh halaman.
+    // Untuk klik tombol "Muat" manual, tombolnya sendiri yang memberi
+    // umpan balik (nonaktif sementara + teks berubah) -- sekaligus
+    // mencegah klik dobel memicu beberapa request bersamaan.
+    const tombolDiklikManual = document.activeElement === el.btnMuatHarian;
+    const teksAsliTombol = el.btnMuatHarian ? el.btnMuatHarian.textContent : '';
+    if (tombolDiklikManual && el.btnMuatHarian) {
+      el.btnMuatHarian.disabled = true;
+      el.btnMuatHarian.textContent = 'Memuat...';
+    }
     try {
       const res = await apiGet('getRekapHarian', { tanggal, token: authToken });
       cache.rekapHarian = res.data;
@@ -520,7 +582,10 @@
     } catch (err) {
       showError(err.message || 'Gagal memuat rekap harian.');
     } finally {
-      hideLoading();
+      if (tombolDiklikManual && el.btnMuatHarian) {
+        el.btnMuatHarian.disabled = false;
+        el.btnMuatHarian.textContent = teksAsliTombol;
+      }
     }
   }
 
@@ -1506,23 +1571,21 @@
 
   function renderOverview() {
     if (!el.ovAktivitasList) return; // guard pakai elemen yang MASIH ADA (bukan yang sudah dihapus dari HTML)
-    const relawanGagal = cache.errors.relawanList;
-    const akunGagal = cache.errors.akunList;
     const gagalTanda = '—'; // beda dari "0" — supaya tidak terbaca sebagai "memang nol"
 
-    const akunById = {};
-    cache.akunList.forEach(a => { akunById[a.idRelawan] = a; });
-    let belumAkun = 0, akunAktif = 0, akunNonaktif = 0;
-    cache.relawanList.forEach(r => {
-      const akun = akunById[r.id];
-      if (!akun) belumAkun++;
-      else if (akun.statusAkun === 'AKTIF') akunAktif++;
-      else akunNonaktif++;
-    });
-
-    el.ovBelumAkun.textContent = (relawanGagal || akunGagal) ? gagalTanda : belumAkun;
-    el.ovAkunAktif2.textContent = (relawanGagal || akunGagal) ? gagalTanda : akunAktif;
-    el.ovAkunNonaktif.textContent = (relawanGagal || akunGagal) ? gagalTanda : akunNonaktif;
+    // ===== RINGKASAN AKUN RELAWAN =====
+    // BARU: pakai getRingkasanAkunRelawan (endpoint ringan, hitung
+    // belumAkun/aktif/nonaktif di server) -- BUKAN lagi cross-reference
+    // cache.akunList (detail penuh 50 akun) dengan cache.relawanList di
+    // frontend seperti sebelumnya. Gate SENDIRI (cache.ringkasanAkun),
+    // TIDAK lagi ikut menunggu dashboardPengelola.
+    const ra = cache.ringkasanAkun;
+    const raGagal = cache.errors.ringkasanAkun;
+    if (ra) {
+      el.ovBelumAkun.textContent = raGagal ? gagalTanda : ra.belumAkun;
+      el.ovAkunAktif2.textContent = raGagal ? gagalTanda : ra.aktif;
+      el.ovAkunNonaktif.textContent = raGagal ? gagalTanda : ra.nonaktif;
+    }
 
     const aktivitas = cache.notifikasiList.slice(0, 6);
     if (!aktivitas.length) {
@@ -1539,138 +1602,159 @@
         </div>`).join('');
     }
 
-    // ===== RINGKASAN DASHBOARD PENGELOLA (BARU) =====
+    // ===== KEHADIRAN + JADWAL + KALENDER (P1-P3, 1 sumber: dashboardPengelola -- sekarang endpoint RINGAN) =====
     const d = cache.dashboardPengelola;
     const dGagal = cache.errors.dashboardPengelola;
-    if (!d) return; // belum selesai dimuat -- tampilan default "–" tetap terlihat sampai data datang
+    if (d) {
+      // -- Kehadiran Hari Ini (6 kategori) --
+      document.getElementById('ovTerlambat').textContent = dGagal ? gagalTanda : d.kehadiran.terlambat;
+      document.getElementById('ovSudahMasuk').textContent = dGagal ? gagalTanda : d.kehadiran.sudahMasuk;
+      document.getElementById('ovSudahPulang').textContent = dGagal ? gagalTanda : d.kehadiran.sudahPulang;
+      document.getElementById('ovBelumMasuk').textContent = dGagal ? gagalTanda : d.kehadiran.belumMasuk;
+      document.getElementById('ovBelumPulang').textContent = dGagal ? gagalTanda : d.kehadiran.belumPulang;
+      document.getElementById('ovBelumAbsen').textContent = dGagal ? gagalTanda : d.kehadiran.belumAbsen;
 
-    // -- Kehadiran Hari Ini (6 kategori baru) --
-    document.getElementById('ovTerlambat').textContent = dGagal ? gagalTanda : d.kehadiran.terlambat;
-    document.getElementById('ovSudahMasuk').textContent = dGagal ? gagalTanda : d.kehadiran.sudahMasuk;
-    document.getElementById('ovSudahPulang').textContent = dGagal ? gagalTanda : d.kehadiran.sudahPulang;
-    document.getElementById('ovBelumMasuk').textContent = dGagal ? gagalTanda : d.kehadiran.belumMasuk;
-    document.getElementById('ovBelumPulang').textContent = dGagal ? gagalTanda : d.kehadiran.belumPulang;
-    document.getElementById('ovBelumAbsen').textContent = dGagal ? gagalTanda : d.kehadiran.belumAbsen;
-
-    // Tombol "Kirim Notifikasi" per kategori -- HANYA muncul kalau kategori itu > 0,
-    // dan mengirim CUMA ke kategori tsb (backend hitung ulang sendiri, aman).
-    const wrapAksi = document.getElementById('ovKehadiranAksiWrap');
-    if (dGagal) { wrapAksi.innerHTML = ''; }
-    else {
-      const daftarAksi = [
-        { kategori: 'terlambat', jumlah: d.kehadiran.terlambat, label: 'terlambat' },
-        { kategori: 'belumMasuk', jumlah: d.kehadiran.belumMasuk, label: 'belum Absen Masuk' },
-        { kategori: 'belumPulang', jumlah: d.kehadiran.belumPulang, label: 'belum Absen Pulang' },
-        { kategori: 'belumAbsen', jumlah: d.kehadiran.belumAbsen, label: 'belum Absen' }
-      ].filter(x => x.jumlah > 0);
-      wrapAksi.innerHTML = daftarAksi.length ? daftarAksi.map(x => `
-        <div style="padding:9px 12px;background:#fff4e5;border-radius:8px;font-size:12.5px;color:#8a5a12;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-          <span>${x.jumlah} relawan ${escapeHtml(x.label)}</span>
-          <button type="button" class="btn-mini primary" data-kirim-kategori="${x.kategori}">Kirim Notifikasi</button>
-        </div>`).join('') : '';
-      wrapAksi.querySelectorAll('[data-kirim-kategori]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const kategori = btn.dataset.kirimKategori;
-          btn.disabled = true;
-          try {
-            const hasil = await apiPost('kirimNotifikasiKategoriKehadiran', { token: authToken, kategori: kategori });
-            showSuccess('Notifikasi terkirim ke ' + hasil.jumlahDikirim + ' relawan.');
-          } catch (err) { showError(err.message); btn.disabled = false; }
+      // Tombol "Kirim Notifikasi" per kategori -- HANYA muncul kalau kategori itu > 0,
+      // dan mengirim CUMA ke kategori tsb (backend hitung ulang sendiri, aman).
+      const wrapAksi = document.getElementById('ovKehadiranAksiWrap');
+      if (dGagal) { wrapAksi.innerHTML = ''; }
+      else {
+        const daftarAksi = [
+          { kategori: 'terlambat', jumlah: d.kehadiran.terlambat, label: 'terlambat' },
+          { kategori: 'belumMasuk', jumlah: d.kehadiran.belumMasuk, label: 'belum Absen Masuk' },
+          { kategori: 'belumPulang', jumlah: d.kehadiran.belumPulang, label: 'belum Absen Pulang' },
+          { kategori: 'belumAbsen', jumlah: d.kehadiran.belumAbsen, label: 'belum Absen' }
+        ].filter(x => x.jumlah > 0);
+        wrapAksi.innerHTML = daftarAksi.length ? daftarAksi.map(x => `
+          <div style="padding:9px 12px;background:#fff4e5;border-radius:8px;font-size:12.5px;color:#8a5a12;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <span>${x.jumlah} relawan ${escapeHtml(x.label)}</span>
+            <button type="button" class="btn-mini primary" data-kirim-kategori="${x.kategori}">Kirim Notifikasi</button>
+          </div>`).join('') : '';
+        wrapAksi.querySelectorAll('[data-kirim-kategori]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const kategori = btn.dataset.kirimKategori;
+            btn.disabled = true;
+            try {
+              const hasil = await apiPost('kirimNotifikasiKategoriKehadiran', { token: authToken, kategori: kategori });
+              showSuccess('Notifikasi terkirim ke ' + hasil.jumlahDikirim + ' relawan.');
+            } catch (err) { showError(err.message); btn.disabled = false; }
+          });
         });
-      });
-    }
+      }
 
-    // -- Jadwal & Penugasan Hari Ini --
-    const jadwalEl = document.getElementById('ovJadwalStatus');
-    const jadwalTeksEl = document.getElementById('ovJadwalTeks');
-    if (dGagal) {
-      jadwalTeksEl.textContent = gagalTanda;
-      jadwalEl.style.background = '#f3f4f6';
-    } else if (d.jadwal.sudahDiatur) {
-      jadwalTeksEl.textContent = '✓ Jadwal & Penugasan hari ini sudah diatur (' + d.jadwal.jumlahShiftDivisi + ' Shift Divisi, ' + d.jadwal.jumlahPenugasanKhusus + ' Penugasan Khusus).';
-      jadwalEl.style.background = '#e8f5e9'; jadwalTeksEl.style.color = '#1a7a4c';
-    } else {
-      jadwalTeksEl.textContent = 'Jadwal & Penugasan Hari Ini Belum Lengkap';
-      jadwalEl.style.background = '#fff4e5'; jadwalTeksEl.style.color = '#8a5a12';
-    }
-
-    // -- Kalender Operasional (judul = Periode Aktif) --
-    const kalJudul = document.getElementById('ovKalenderJudul');
-    const kalIsi = document.getElementById('ovKalenderIsi');
-    if (dGagal) {
-      kalIsi.textContent = gagalTanda;
-    } else if (!d.periodeAktif) {
-      kalJudul.textContent = '🗓️ Kalender Operasional';
-      kalIsi.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);margin:0;">Belum ada Periode Kerja yang berstatus AKTIF.</p>';
-    } else {
-      kalJudul.textContent = '🗓️ ' + d.periodeAktif.nama;
-      if (!d.kalenderPeriodeAktif.length) {
-        kalIsi.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);margin:0;">Belum ada tanggal operasional untuk periode ini.</p>';
+      // -- Jadwal & Penugasan Hari Ini --
+      const jadwalEl = document.getElementById('ovJadwalStatus');
+      const jadwalTeksEl = document.getElementById('ovJadwalTeks');
+      if (dGagal) {
+        jadwalTeksEl.textContent = gagalTanda;
+        jadwalEl.style.background = '#f3f4f6';
+      } else if (d.jadwal.sudahDiatur) {
+        jadwalTeksEl.textContent = '✓ Jadwal & Penugasan hari ini sudah diatur (' + d.jadwal.jumlahShiftDivisi + ' Shift Divisi, ' + d.jadwal.jumlahPenugasanKhusus + ' Penugasan Khusus).';
+        jadwalEl.style.background = '#e8f5e9'; jadwalTeksEl.style.color = '#1a7a4c';
       } else {
-        kalIsi.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + d.kalenderPeriodeAktif.map(k => {
-          const isHariIni = !!k.adalahHariIni;
-          const statusUp = String(k.status || '').toUpperCase();
-          let warna = '#e5e7eb', teksWarna = '#374151'; // BELUM BERJALAN (default)
-          if (statusUp.indexOf('SELESAI') !== -1) { warna = '#d1fae5'; teksWarna = '#065f46'; }
-          else if (statusUp.indexOf('BERJALAN') !== -1 || statusUp.indexOf('AKTIF') !== -1) { warna = '#fef3c7'; teksWarna = '#92400e'; }
-          return `<div data-tanggal-kalender="${escapeHtml(String(k.tanggal))}" style="cursor:pointer;min-width:64px;text-align:center;padding:8px 6px;border-radius:8px;background:${warna};color:${teksWarna};font-size:11.5px;font-weight:700;${isHariIni ? 'outline:2px solid var(--color-navy);outline-offset:1px;' : ''}" title="Klik untuk buka Jadwal & Penugasan">
-            <div>${escapeHtml(k.hari || '')}</div>
-            <div style="font-size:13px;">${escapeHtml(String(k.tanggal || '').split(' ')[0] || k.tanggal)}</div>
-          </div>`;
-        }).join('') + '</div>';
-        kalIsi.querySelectorAll('[data-tanggal-kalender]').forEach(el => {
-          el.addEventListener('click', () => { document.querySelector('[data-panel=panelShift]').click(); });
-        });
+        jadwalTeksEl.textContent = 'Jadwal & Penugasan Hari Ini Belum Lengkap';
+        jadwalEl.style.background = '#fff4e5'; jadwalTeksEl.style.color = '#8a5a12';
+      }
+
+      // -- Kalender Operasional (judul = Periode Aktif) --
+      const kalJudul = document.getElementById('ovKalenderJudul');
+      const kalIsi = document.getElementById('ovKalenderIsi');
+      if (dGagal) {
+        kalIsi.textContent = gagalTanda;
+      } else if (!d.periodeAktif) {
+        kalJudul.textContent = '🗓️ Kalender Operasional';
+        kalIsi.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);margin:0;">Belum ada Periode Kerja yang berstatus AKTIF.</p>';
+      } else {
+        kalJudul.textContent = '🗓️ ' + d.periodeAktif.nama;
+        if (!d.kalenderPeriodeAktif.length) {
+          kalIsi.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);margin:0;">Belum ada tanggal operasional untuk periode ini.</p>';
+        } else {
+          kalIsi.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + d.kalenderPeriodeAktif.map(k => {
+            const isHariIni = !!k.adalahHariIni;
+            const statusUp = String(k.status || '').toUpperCase();
+            let warna = '#e5e7eb', teksWarna = '#374151'; // BELUM BERJALAN (default)
+            if (statusUp.indexOf('SELESAI') !== -1) { warna = '#d1fae5'; teksWarna = '#065f46'; }
+            else if (statusUp.indexOf('BERJALAN') !== -1 || statusUp.indexOf('AKTIF') !== -1) { warna = '#fef3c7'; teksWarna = '#92400e'; }
+            return `<div data-tanggal-kalender="${escapeHtml(String(k.tanggal))}" style="cursor:pointer;min-width:64px;text-align:center;padding:8px 6px;border-radius:8px;background:${warna};color:${teksWarna};font-size:11.5px;font-weight:700;${isHariIni ? 'outline:2px solid var(--color-navy);outline-offset:1px;' : ''}" title="Klik untuk buka Jadwal & Penugasan">
+              <div>${escapeHtml(k.hari || '')}</div>
+              <div style="font-size:13px;">${escapeHtml(String(k.tanggal || '').split(' ')[0] || k.tanggal)}</div>
+            </div>`;
+          }).join('') + '</div>';
+          kalIsi.querySelectorAll('[data-tanggal-kalender]').forEach(el => {
+            el.addEventListener('click', () => { document.querySelector('[data-panel=panelShift]').click(); });
+          });
+        }
       }
     }
 
-    // -- Rekap 2 Minggu (otomatis Sementara/Selesai) --
-    const rekJudul = document.getElementById('ovRekapJudul');
-    const rekIsi = document.getElementById('ovRekapIsi');
-    if (dGagal) {
-      rekIsi.textContent = gagalTanda;
-    } else if (!d.rekapDuaMinggu.tersedia) {
-      rekJudul.textContent = '📊 Rekap 2 Minggu';
-      rekIsi.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);margin:0;">Belum ada Periode Kerja untuk direkap.</p>';
-    } else {
-      rekJudul.textContent = '📊 Rekap 2 Minggu — ' + (d.rekapDuaMinggu.sementara ? 'Sementara' : 'Periode Selesai') + ' (' + d.rekapDuaMinggu.judul + ')';
-      const rk = d.rekapDuaMinggu.data;
-      const totalHadir = rk.reduce((a, r) => a + (r.hadir || 0), 0);
-      const totalTerlambat = rk.reduce((a, r) => a + (r.terlambat || 0), 0);
-      const totalTidakHadir = rk.reduce((a, r) => a + (r.tidakHadir || 0), 0);
-      rekIsi.innerHTML = `<div class="admin-stat-grid">
-        <div class="admin-stat-card accent-success"><div class="admin-stat-value">${totalHadir}</div><div class="admin-stat-label">Total Hadir</div></div>
-        <div class="admin-stat-card accent-warning"><div class="admin-stat-value">${totalTerlambat}</div><div class="admin-stat-label">Total Terlambat</div></div>
-        <div class="admin-stat-card accent-danger"><div class="admin-stat-value">${totalTidakHadir}</div><div class="admin-stat-label">Total Tidak Hadir</div></div>
-      </div>`;
+    // ===== REKAP 2 MINGGU (P6 -- BARU: sumber SENDIRI, gate SENDIRI, tidak lagi ikut dashboardPengelola) =====
+    const rd = cache.rekapDuaMingguDashboard;
+    const rdGagal = cache.errors.rekapDuaMingguDashboard;
+    if (rd) {
+      const rekJudul = document.getElementById('ovRekapJudul');
+      const rekIsi = document.getElementById('ovRekapIsi');
+      if (rdGagal) {
+        rekIsi.textContent = gagalTanda;
+      } else if (!rd.tersedia) {
+        rekJudul.textContent = '📊 Rekap 2 Minggu';
+        rekIsi.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);margin:0;">Belum ada Periode Kerja untuk direkap.</p>';
+      } else {
+        rekJudul.textContent = '📊 Rekap 2 Minggu — ' + (rd.sementara ? 'Sementara' : 'Periode Selesai') + ' (' + rd.judul + ')';
+        const rk = rd.data;
+        const totalHadir = rk.reduce((a, r) => a + (r.hadir || 0), 0);
+        const totalTerlambat = rk.reduce((a, r) => a + (r.terlambat || 0), 0);
+        const totalTidakHadir = rk.reduce((a, r) => a + (r.tidakHadir || 0), 0);
+        rekIsi.innerHTML = `<div class="admin-stat-grid">
+          <div class="admin-stat-card accent-success"><div class="admin-stat-value">${totalHadir}</div><div class="admin-stat-label">Total Hadir</div></div>
+          <div class="admin-stat-card accent-warning"><div class="admin-stat-value">${totalTerlambat}</div><div class="admin-stat-label">Total Terlambat</div></div>
+          <div class="admin-stat-card accent-danger"><div class="admin-stat-value">${totalTidakHadir}</div><div class="admin-stat-label">Total Tidak Hadir</div></div>
+        </div>`;
+      }
     }
 
-    // -- SIRAGA — Persediaan --
-    document.getElementById('ovStokTotal').textContent = dGagal ? gagalTanda : d.siraga.totalBarang;
-    document.getElementById('ovStokAman').textContent = dGagal ? gagalTanda : d.siraga.aman;
-    document.getElementById('ovStokMenipis').textContent = dGagal ? gagalTanda : d.siraga.menipis;
-    document.getElementById('ovStokKritis').textContent = dGagal ? gagalTanda : d.siraga.kritis;
-
-    // -- SIPANDU --
-    const sipanduTeks = document.getElementById('ovSipanduRingkasan');
-    if (dGagal) {
-      sipanduTeks.textContent = gagalTanda;
-    } else if (!d.sipandu.adaData) {
-      sipanduTeks.textContent = 'Belum ada data Work Order di SIPANDU.';
-    } else {
-      sipanduTeks.textContent = d.sipandu.woHariIni + ' Work Order hari ini' + (d.sipandu.perluValidasi > 0 ? ', ' + d.sipandu.perluValidasi + ' menunggu validasi.' : '.');
+    // ===== SIRAGA — Persediaan (P5 -- BARU: sumber SENDIRI, gate SENDIRI) =====
+    const sg = cache.siragaDashboard;
+    const sgGagal = cache.errors.siragaDashboard;
+    if (sg) {
+      document.getElementById('ovStokTotal').textContent = sgGagal ? gagalTanda : sg.totalBarang;
+      document.getElementById('ovStokAman').textContent = sgGagal ? gagalTanda : sg.aman;
+      document.getElementById('ovStokMenipis').textContent = sgGagal ? gagalTanda : sg.menipis;
+      document.getElementById('ovStokKritis').textContent = sgGagal ? gagalTanda : sg.kritis;
     }
 
-    // -- 🔴 PERLU TINDAKAN (dihitung dari data di atas, tidak perlu request tambahan) --
+    // ===== SIPANDU (BARU: sumber SENDIRI, gate SENDIRI) =====
+    const sp = cache.sipanduRingkas;
+    const spGagal = cache.errors.sipanduRingkas;
+    if (sp) {
+      const sipanduTeks = document.getElementById('ovSipanduRingkasan');
+      if (spGagal) {
+        sipanduTeks.textContent = gagalTanda;
+      } else if (!sp.adaData) {
+        sipanduTeks.textContent = 'Belum ada data Work Order di SIPANDU.';
+      } else {
+        sipanduTeks.textContent = sp.woHariIni + ' Work Order hari ini' + (sp.perluValidasi > 0 ? ', ' + sp.perluValidasi + ' menunggu validasi.' : '.');
+      }
+    }
+
+    // ===== 🔴 PERLU TINDAKAN =====
+    // BARU: setiap sumbernya (Kehadiran/Jadwal dari dashboardPengelola,
+    // SIRAGA dari siragaDashboard, SIPANDU dari sipanduRingkas) sekarang
+    // independen -- jadi tiap kondisi CUMA dicek kalau sumber data-nya
+    // sendiri SUDAH datang (bukan lagi digabung di 1 gate besar). Bagian
+    // ini otomatis makin lengkap tiap kali renderOverview() dipanggil
+    // ulang seiring sumber lain menyusul -- konsisten dengan prinsip
+    // "render begitu siap, bukan tunggu semua".
     const tindakan = [];
-    if (!dGagal) {
+    if (d && !dGagal) {
       if (d.kehadiran.belumMasuk > 0) tindakan.push({ teks: d.kehadiran.belumMasuk + ' relawan belum absen masuk', aksi: 'Kirim Notifikasi', panel: 'panelNotifikasiAdmin' });
       if (!d.jadwal.sudahDiatur) tindakan.push({ teks: 'Jadwal & Penugasan hari ini belum diatur', aksi: 'Atur Jadwal', panel: 'panelShift' });
-      if (d.siraga.kritis > 0) tindakan.push({ teks: d.siraga.kritis + ' barang stok kritis', aksi: 'Lihat Stok', panel: 'panelStok' });
-      if (d.sipandu.perluValidasi > 0) tindakan.push({ teks: d.sipandu.perluValidasi + ' Work Order SIPANDU menunggu validasi', aksi: null, panel: null });
     }
+    if (sg && !sgGagal && sg.kritis > 0) tindakan.push({ teks: sg.kritis + ' barang stok kritis', aksi: 'Lihat Stok', panel: 'panelStok' });
+    if (sp && !spGagal && sp.perluValidasi > 0) tindakan.push({ teks: sp.perluValidasi + ' Work Order SIPANDU menunggu validasi', aksi: null, panel: null });
+
     const wadahTindakan = document.getElementById('ovPerluTindakan');
-    if (dGagal) {
+    const semuaSumberTindakanGagal = dGagal && sgGagal && spGagal;
+    if (semuaSumberTindakanGagal) {
       wadahTindakan.innerHTML = '<div class="profile-identity-row"><span>' + gagalTanda + '</span><span></span></div>';
     } else if (!tindakan.length) {
       wadahTindakan.innerHTML = '<div class="profile-identity-row"><span>✓ Tidak ada hal yang perlu ditindaklanjuti saat ini.</span><span></span></div>';
@@ -1941,4 +2025,68 @@
   if (btnOverview) {
     btnOverview.addEventListener('click', () => { btnTabSipandu.click(); });
   }
+
+  // ==================================================================
+  // SESSION PERSISTENCE — pulihkan sesi setelah refresh/buka ulang halaman
+  // ==================================================================
+  /**
+   * Dipanggil SEKALI saat script ini pertama jalan (baris paling akhir
+   * file). Kalau ada sesi tersimpan (login SEBELUMNYA, lewat
+   * simpanSesiAdmin di submit handler Login), coba pulihkan TANPA minta
+   * username/password lagi -- alih-alih membiarkan Login form tampil
+   * default setiap refresh.
+   *
+   * PENTING: bedakan 2 hal yang HARUS ditangani BEDA (lihat
+   * apakahErrorSesiTidakValid di auth-admin.js):
+   *   SESSION INVALID/BERAKHIR -> hapus sesi tersimpan, tampilkan Login.
+   *   NETWORK ERROR/TIMEOUT    -> JANGAN hapus sesi, coba lagi 1x (pola
+   *                               sama seperti retry di form Login
+   *                               manual), kalau tetap gagal biarkan
+   *                               Login tampil TAPI sesi tersimpan tetap
+   *                               ada (supaya reload berikutnya, atau
+   *                               login manual, tetap bisa jalan normal).
+   */
+  async function pulihkanSesiAdmin_() {
+    const sesi = ambilSesiAdmin();
+    if (!sesi || !sesi.token) return; // tidak ada sesi tersimpan -- biarkan Login form tampil apa adanya (default)
+
+    showLoading('Memeriksa sesi...');
+    let info;
+    try {
+      info = await apiGet('validasiSesiAdmin', { token: sesi.token });
+    } catch (errPertama) {
+      if (apakahErrorSesiTidakValid(errPertama.message)) {
+        hapusSesiAdmin();
+        hideLoading();
+        return;
+      }
+      // Kemungkinan besar jaringan/timeout -- coba sekali lagi (pola SAMA
+      // seperti retry di form Login manual di atas). Sesi tersimpan
+      // SENGAJA belum dihapus di sini.
+      showLoading('Koneksi lambat, memeriksa sesi lagi...');
+      try {
+        info = await apiGet('validasiSesiAdmin', { token: sesi.token });
+      } catch (errKedua) {
+        hideLoading();
+        if (apakahErrorSesiTidakValid(errKedua.message)) {
+          hapusSesiAdmin();
+        } else {
+          // Tetap gagal karena jaringan, BUKAN karena sesi tidak valid --
+          // JANGAN hapus sesi (masih bisa dipakai kalau koneksi pulih,
+          // baik lewat reload nanti maupun otomatis kalau user login
+          // manual). Login form dibiarkan tampil (default), + 1 baris
+          // penjelasan supaya user tidak bingung.
+          el.loginError.textContent = 'Tidak bisa memeriksa sesi (koneksi bermasalah). Anda tetap bisa login manual, atau coba muat ulang halaman.';
+        }
+        return;
+      }
+    }
+
+    // Sesi valid -- lanjutkan PERSIS seperti alur setelah login manual berhasil.
+    masukKeDashboard_(sesi.token, info.username, info.role);
+    hideLoading();
+    await initDashboard();
+  }
+
+  pulihkanSesiAdmin_();
 })();

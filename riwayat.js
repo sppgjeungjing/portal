@@ -72,9 +72,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     main.style.display = 'block';
   } catch (err) {
     hideLoading();
-    // Sesi kedaluwarsa / akun dinonaktifkan → kembali ke login dengan pesan yang jelas.
-    hapusSesiRelawan();
-    simpanNotisLogin(err.message || 'Sesi telah berakhir. Silakan login kembali.');
-    window.location.href = 'login.html';
+    // OPTIMASI: sebelumnya SEMUA error di sini (termasuk gangguan
+    // jaringan/timeout biasa) langsung dianggap "sesi berakhir" dan
+    // memaksa kembali ke Login -- padahal error jaringan BUKAN berarti
+    // sesinya tidak valid. Sekarang dibedakan: cuma redirect ke Login
+    // kalau pesannya memang menandakan sesi tidak valid/berakhir.
+    if (apakahErrorSesiTidakValid(err.message)) {
+      hapusSesiRelawan();
+      simpanNotisLogin(err.message || 'Sesi telah berakhir. Silakan login kembali.');
+      window.location.href = 'login.html';
+      return;
+    }
+    showError(err.message || 'Gagal memuat riwayat.');
+    main.innerHTML = `
+      <div class="empty-state" style="padding:40px 20px;text-align:center;">
+        <p style="margin:0 0 12px;font-size:14px;color:#55606f;">Data belum dapat dimuat. Periksa koneksi internet Anda.</p>
+        <button type="button" id="btnCobaLagiRiwayat" class="btn-outline">↻ Coba Lagi</button>
+      </div>`;
+    main.style.display = 'block';
+    const btnCobaLagi = document.getElementById('btnCobaLagiRiwayat');
+    if (btnCobaLagi) btnCobaLagi.addEventListener('click', () => window.location.reload());
   }
 });

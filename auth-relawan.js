@@ -41,3 +41,16 @@ function ambilDanHapusNotisLogin() {
     return null;
   }
 }
+
+/**
+ * true kalau pesan error menandakan sesi memang tidak valid/berakhir --
+ * server SELALU menyertakan frasa "login kembali" utk kasus itu (lihat
+ * requireAuthRelawan di Akun.gs). BUKAN dipakai untuk error jaringan/
+ * timeout biasa (pesannya beda). Dipakai untuk membedakan 2 hal yang
+ * harus ditangani BEDA di tiap halaman relawan:
+ *   SESSION INVALID -> hapus sesi lokal, kembali ke Login.
+ *   NETWORK ERROR   -> JANGAN hapus sesi, tampilkan retry saja.
+ */
+function apakahErrorSesiTidakValid(pesanError) {
+  return /login kembali/i.test(pesanError || '');
+}

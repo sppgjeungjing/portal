@@ -36,8 +36,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     main.style.display = 'block';
   } catch (err) {
     hideLoading();
-    hapusSesiRelawan();
-    simpanNotisLogin(err.message || 'Sesi telah berakhir. Silakan login kembali.');
-    window.location.href = 'login.html';
+    if (apakahErrorSesiTidakValid(err.message)) {
+      hapusSesiRelawan();
+      simpanNotisLogin(err.message || 'Sesi telah berakhir. Silakan login kembali.');
+      window.location.href = 'login.html';
+      return;
+    }
+    showError(err.message || 'Gagal memuat informasi.');
   }
 });

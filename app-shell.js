@@ -166,10 +166,20 @@ async function bootRelawanShell() {
       }
     }
   } catch (err) {
-    // Sesi kedaluwarsa / akun dinonaktifkan — perlakuan sama seperti modul lain.
-    hapusSesiRelawan();
-    if (typeof simpanNotisLogin === 'function') simpanNotisLogin(err.message || 'Sesi telah berakhir. Silakan login kembali.');
-    window.location.href = 'login.html';
+    // OPTIMASI: sebelumnya SEMUA error di sini (termasuk gangguan
+    // jaringan biasa) langsung dianggap "sesi berakhir" -- ini fungsi
+    // shell yang jalan di SETIAP halaman relawan, jadi gangguan jaringan
+    // sesaat bisa memaksa logout dari halaman mana pun. Sekarang cuma
+    // redirect ke Login kalau pesannya memang menandakan sesi tidak
+    // valid/berakhir.
+    if (typeof apakahErrorSesiTidakValid === 'function' && apakahErrorSesiTidakValid(err.message)) {
+      hapusSesiRelawan();
+      if (typeof simpanNotisLogin === 'function') simpanNotisLogin(err.message || 'Sesi telah berakhir. Silakan login kembali.');
+      window.location.href = 'login.html';
+    }
+    // Error jaringan biasa: diamkan saja di sini -- nama/status/badge
+    // notifikasi di sidebar cukup tetap kosong/default untuk sesi ini,
+    // TIDAK memaksa keluar dari halaman yang sedang dibuka relawan.
   }
 }
 
