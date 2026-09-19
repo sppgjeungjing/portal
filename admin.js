@@ -538,6 +538,14 @@
     el.filterDivisiRelawan.innerHTML = opts;
     el.selectDivisiRelawanBaru.innerHTML = '<option value="" disabled selected>Pilih Divisi</option>' +
       cache.divisiList.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+    // BARU: checkbox divisi utk "Tambah Satu Tanggal" -> tanggal khusus per divisi.
+    const wadahCbDivisi = document.getElementById('checkboxDivisiKhusus');
+    if (wadahCbDivisi) {
+      wadahCbDivisi.innerHTML = cache.divisiList.map(d => `
+        <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:400;cursor:pointer;">
+          <input type="checkbox" class="cb-divisi-khusus" value="${escapeHtml(d)}"> ${escapeHtml(d)}
+        </label>`).join('');
+    }
   }
 
   function pad2(n) { return String(n).padStart(2, '0'); }
@@ -1281,7 +1289,7 @@
         <td>${escapeHtml(k.tanggal)}<br><span style="font-size:11px;color:var(--color-text-muted);">${escapeHtml(k.hari || '')}</span></td>
         <td>${escapeHtml(k.namaPeriode)}</td>
         <td><span class="badge ${k.status === 'AKTIF' ? 'aktif' : 'nonaktif'}">${escapeHtml(k.status)}</span></td>
-        <td>${escapeHtml(k.keterangan || '-')}</td>
+        <td>${escapeHtml(k.keterangan || '-')}${(k.divisiKhusus && k.divisiKhusus.length) ? `<br><span style="display:inline-block;margin-top:4px;font-size:11px;padding:2px 8px;background:#fff4e5;color:#8a5a12;border-radius:6px;">🔒 Khusus: ${escapeHtml(k.divisiKhusus.join(', '))}</span>` : ''}</td>
         <td>
           <button type="button" class="btn-mini btn-toggle-operasional" data-status-baru="${k.status === 'AKTIF' ? 'DIBATALKAN' : 'AKTIF'}">${k.status === 'AKTIF' ? 'Batalkan' : 'Aktifkan'}</button>
           <button type="button" class="btn-mini btn-hapus-operasional">Hapus</button>
@@ -1372,15 +1380,22 @@
 
   el.formTambahOperasional.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const divisiKhususTerpilih = Array.from(document.querySelectorAll('.cb-divisi-khusus:checked')).map(cb => cb.value);
+    if (divisiKhususTerpilih.length) {
+      const daftarNama = divisiKhususTerpilih.join(', ');
+      if (!confirm(`Tanggal ini akan HANYA berlaku untuk divisi: ${daftarNama}.\n\nDivisi LAIN akan dianggap tidak punya operasional (libur) pada tanggal ini. Lanjutkan?`)) return;
+    }
     showLoading('Menambah tanggal operasional...');
     try {
       await apiPost('addOperasional', {
         token: authToken,
         idPeriode: el.selectPeriodeOperasional.value,
         tanggal: el.inputTanggalOperasional.value,
-        keterangan: el.inputKeteranganOperasional.value.trim()
+        keterangan: el.inputKeteranganOperasional.value.trim(),
+        divisiKhusus: divisiKhususTerpilih
       });
       el.formTambahOperasional.reset();
+      document.querySelectorAll('.cb-divisi-khusus:checked').forEach(cb => { cb.checked = false; });
       el.filterPeriodeKalender.value = el.selectPeriodeOperasional.value;
       await muatUlangKalender();
       showSuccess('Tanggal operasional ditambahkan.');
