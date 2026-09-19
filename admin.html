@@ -1022,6 +1022,55 @@
       </div>
     </details>
 
+    <!-- BARU: Penerima Manfaat rinci per instansi (PK/PB utk Peserta Didik,
+         Bumil/Busui/Balita utk 3B) -- BEDA dari "Data Penerimaan" di atas
+         yang cuma 4 angka ringkasan. Ini sumber utama utk tabel detail +
+         total di Website Publik (halaman Penerima Manfaat). -->
+    <details class="panel-block" style="margin-top:16px;">
+      <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">Penerima Manfaat — Rinci per Instansi (Peserta Didik / 3B)</summary>
+      <div style="margin-top:12px;">
+        <p style="font-size:12px;color:var(--color-text-muted);margin:0 0 10px;">Ini yang tampil sebagai tabel rinci (per sekolah/posyandu) di Website Publik, beda dari ringkasan kategori di atas.</p>
+        <button type="button" class="btn-outline" id="btnBukaFormPM">+ Tambah Penerima Manfaat</button>
+
+        <form id="formPenerimaManfaat" style="display:none;margin-top:12px;flex-direction:column;gap:10px;" class="inline-form">
+          <input type="hidden" id="pmEditId" value="">
+          <select id="pmKategori" required>
+            <option value="" disabled selected>Pilih Kategori</option>
+            <option value="PESERTA_DIDIK">Peserta Didik</option>
+            <option value="3B">3B (Bumil / Busui / Balita)</option>
+          </select>
+          <input type="text" id="pmInstansi" placeholder="Nama Sekolah / Nama Posyandu" required>
+
+          <div id="pmFieldPesertaDidik" style="display:none;gap:10px;">
+            <div style="display:flex;gap:10px;">
+              <label style="flex:1;font-size:12.5px;">PK — Porsi Kecil<input type="number" id="pmPk" min="0" value="0" style="width:100%;margin-top:4px;"></label>
+              <label style="flex:1;font-size:12.5px;">PB — Porsi Besar<input type="number" id="pmPb" min="0" value="0" style="width:100%;margin-top:4px;"></label>
+            </div>
+          </div>
+          <div id="pmField3B" style="display:none;gap:10px;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <label style="flex:1;min-width:90px;font-size:12.5px;">Bumil<input type="number" id="pmBumil" min="0" value="0" style="width:100%;margin-top:4px;"></label>
+              <label style="flex:1;min-width:90px;font-size:12.5px;">Busui<input type="number" id="pmBusui" min="0" value="0" style="width:100%;margin-top:4px;"></label>
+              <label style="flex:1;min-width:90px;font-size:12.5px;">Balita<input type="number" id="pmBalita" min="0" value="0" style="width:100%;margin-top:4px;"></label>
+            </div>
+          </div>
+
+          <p style="font-size:13px;margin:0;">Jumlah (otomatis): <strong id="pmJumlahPreview">0</strong></p>
+          <div style="display:flex;gap:8px;">
+            <button type="submit" class="btn-mini primary" id="btnSimpanPM">Simpan</button>
+            <button type="button" class="btn-mini" id="btnBatalPM">Batal</button>
+          </div>
+        </form>
+
+        <div class="table-wrap" style="margin-top:12px;">
+          <table>
+            <thead><tr><th>Kategori</th><th>Instansi</th><th>PK</th><th>PB</th><th>Bumil</th><th>Busui</th><th>Balita</th><th>Jumlah</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="tbodyPenerimaManfaat"><tr><td colspan="10"><div class="empty-state">Memuat...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
     <details class="panel-block" style="margin-top:16px;">
       <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">Menu Hari Ini (menu makanan &amp; gizi harian)</summary>
       <div style="margin-top:12px;">

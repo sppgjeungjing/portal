@@ -390,6 +390,7 @@
       sudahDimuat = true;
       muatDaftar_();
       muatDataPenerimaan_();
+      muatPenerimaManfaat_();
       muatMenuWebsite_();
       renderFormGiziMenuHarian_();
       pasangBacaOtomatisMenuHarian_();
@@ -410,6 +411,160 @@
         inputKategori.value = ''; inputJumlah.value = '';
         muatDataPenerimaan_();
       } catch (err) { showError(err.message); }
+    });
+  }
+
+  // ==================================================================
+  // BARU: Penerima Manfaat rinci per instansi (PK/PB / Bumil/Busui/Balita)
+  // ==================================================================
+  const pmEl = {
+    btnBuka: document.getElementById('btnBukaFormPM'),
+    form: document.getElementById('formPenerimaManfaat'),
+    editId: document.getElementById('pmEditId'),
+    kategori: document.getElementById('pmKategori'),
+    instansi: document.getElementById('pmInstansi'),
+    fieldPesertaDidik: document.getElementById('pmFieldPesertaDidik'),
+    field3B: document.getElementById('pmField3B'),
+    pk: document.getElementById('pmPk'), pb: document.getElementById('pmPb'),
+    bumil: document.getElementById('pmBumil'), busui: document.getElementById('pmBusui'), balita: document.getElementById('pmBalita'),
+    jumlahPreview: document.getElementById('pmJumlahPreview'),
+    btnBatal: document.getElementById('btnBatalPM'),
+    tbody: document.getElementById('tbodyPenerimaManfaat')
+  };
+
+  function tampilkanFieldSesuaiKategoriPM_() {
+    const isPesertaDidik = pmEl.kategori.value === 'PESERTA_DIDIK';
+    pmEl.fieldPesertaDidik.style.display = isPesertaDidik ? 'flex' : 'none';
+    pmEl.field3B.style.display = isPesertaDidik ? 'none' : 'flex';
+    hitungJumlahPreviewPM_();
+  }
+
+  function hitungJumlahPreviewPM_() {
+    let jumlah;
+    if (pmEl.kategori.value === 'PESERTA_DIDIK') {
+      jumlah = (Number(pmEl.pk.value) || 0) + (Number(pmEl.pb.value) || 0);
+    } else {
+      jumlah = (Number(pmEl.bumil.value) || 0) + (Number(pmEl.busui.value) || 0) + (Number(pmEl.balita.value) || 0);
+    }
+    pmEl.jumlahPreview.textContent = jumlah;
+  }
+
+  function resetFormPM_() {
+    pmEl.editId.value = '';
+    pmEl.kategori.value = '';
+    pmEl.instansi.value = '';
+    pmEl.pk.value = 0; pmEl.pb.value = 0; pmEl.bumil.value = 0; pmEl.busui.value = 0; pmEl.balita.value = 0;
+    pmEl.fieldPesertaDidik.style.display = 'none';
+    pmEl.field3B.style.display = 'none';
+    pmEl.jumlahPreview.textContent = '0';
+    document.getElementById('btnSimpanPM').textContent = 'Simpan';
+  }
+
+  if (pmEl.btnBuka) {
+    pmEl.btnBuka.addEventListener('click', () => {
+      resetFormPM_();
+      pmEl.form.style.display = pmEl.form.style.display === 'none' ? 'flex' : 'none';
+    });
+  }
+  if (pmEl.btnBatal) {
+    pmEl.btnBatal.addEventListener('click', () => { resetFormPM_(); pmEl.form.style.display = 'none'; });
+  }
+  if (pmEl.kategori) pmEl.kategori.addEventListener('change', tampilkanFieldSesuaiKategoriPM_);
+  [pmEl.pk, pmEl.pb, pmEl.bumil, pmEl.busui, pmEl.balita].forEach(el => {
+    if (el) el.addEventListener('input', hitungJumlahPreviewPM_);
+  });
+
+  async function muatPenerimaManfaat_() {
+    if (!pmEl.tbody) return;
+    pmEl.tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">Memuat...</div></td></tr>';
+    try {
+      const daftar = await apiGet('getPenerimaManfaatAdmin', { token: token() });
+      if (!daftar.length) {
+        pmEl.tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">Belum ada data Penerima Manfaat.</div></td></tr>';
+        return;
+      }
+      pmEl.tbody.innerHTML = daftar.map(r => `
+        <tr data-id="${escapeHtml(r.id)}">
+          <td>${r.kategori === 'PESERTA_DIDIK' ? 'Peserta Didik' : '3B'}</td>
+          <td>${escapeHtml(r.instansi)}</td>
+          <td>${r.kategori === 'PESERTA_DIDIK' ? r.pk : '—'}</td>
+          <td>${r.kategori === 'PESERTA_DIDIK' ? r.pb : '—'}</td>
+          <td>${r.kategori === '3B' ? r.bumil : '—'}</td>
+          <td>${r.kategori === '3B' ? r.busui : '—'}</td>
+          <td>${r.kategori === '3B' ? r.balita : '—'}</td>
+          <td><strong>${r.jumlah}</strong></td>
+          <td><span class="badge ${r.status === 'AKTIF' ? 'aktif' : 'nonaktif'}">${escapeHtml(r.status)}</span></td>
+          <td style="white-space:nowrap;">
+            <button type="button" class="btn-mini btn-edit-pm">Edit</button>
+            <button type="button" class="btn-mini btn-toggle-pm" data-aktif="${r.status === 'AKTIF' ? '0' : '1'}">${r.status === 'AKTIF' ? 'Nonaktifkan' : 'Aktifkan'}</button>
+          </td>
+        </tr>`).join('');
+
+      pmEl.tbody.querySelectorAll('.btn-edit-pm').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tr = btn.closest('tr');
+          const id = tr.dataset.id;
+          const r = daftar.find(x => x.id === id);
+          if (!r) return;
+          pmEl.editId.value = r.id;
+          pmEl.kategori.value = r.kategori;
+          pmEl.instansi.value = r.instansi;
+          pmEl.pk.value = r.pk; pmEl.pb.value = r.pb;
+          pmEl.bumil.value = r.bumil; pmEl.busui.value = r.busui; pmEl.balita.value = r.balita;
+          tampilkanFieldSesuaiKategoriPM_();
+          document.getElementById('btnSimpanPM').textContent = 'Simpan Perubahan';
+          pmEl.form.style.display = 'flex';
+          pmEl.form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      });
+      pmEl.tbody.querySelectorAll('.btn-toggle-pm').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.closest('tr').dataset.id;
+          const aktifBaru = btn.dataset.aktif === '1';
+          if (!confirm((aktifBaru ? 'Aktifkan' : 'Nonaktifkan') + ' data ini? ' + (aktifBaru ? '' : 'Data TIDAK dihapus, cuma disembunyikan dari Website Publik.'))) return;
+          try {
+            await apiPost('setStatusPenerimaManfaat', { token: token(), id: id, aktif: aktifBaru });
+            showSuccess('Status diperbarui.');
+            muatPenerimaManfaat_();
+          } catch (err) { showError(err.message); }
+        });
+      });
+    } catch (err) {
+      pmEl.tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="color:#b23a3a;">${escapeHtml(err.message)}</div></td></tr>`;
+    }
+  }
+
+  if (pmEl.form) {
+    pmEl.form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!pmEl.kategori.value) { showError('Pilih kategori dulu.'); return; }
+      if (!pmEl.instansi.value.trim()) { showError('Nama instansi wajib diisi.'); return; }
+      const payload = {
+        token: token(),
+        kategori: pmEl.kategori.value,
+        instansi: pmEl.instansi.value.trim(),
+        pk: pmEl.pk.value, pb: pmEl.pb.value,
+        bumil: pmEl.bumil.value, busui: pmEl.busui.value, balita: pmEl.balita.value
+      };
+      const btnSimpan = document.getElementById('btnSimpanPM');
+      btnSimpan.disabled = true; // anti-double-click
+      try {
+        if (pmEl.editId.value) {
+          payload.id = pmEl.editId.value;
+          await apiPost('updatePenerimaManfaat', payload);
+          showSuccess('Data Penerima Manfaat diperbarui.');
+        } else {
+          await apiPost('addPenerimaManfaat', payload);
+          showSuccess('Penerima Manfaat baru ditambahkan.');
+        }
+        resetFormPM_();
+        pmEl.form.style.display = 'none';
+        muatPenerimaManfaat_();
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        btnSimpan.disabled = false;
+      }
     });
   }
 })();
