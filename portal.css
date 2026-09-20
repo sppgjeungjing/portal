@@ -250,6 +250,7 @@
 .profile-identity-row:last-child { border-bottom: none; }
 .profile-identity-row span:first-child { color: var(--color-text-muted); }
 .profile-identity-row span:last-child { font-weight: 700; color: var(--color-navy); text-align: right; }
+.profile-identity-row span:last-child.is-kosong { font-weight: 500; color: var(--color-text-muted); font-style: italic; }
 
 .profile-section-title {
   font-size: 13px; font-weight: 700; color: var(--color-text-muted);

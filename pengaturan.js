@@ -27,6 +27,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       const data = await apiGet('getPengaturanAkun', { token: sesi.token });
       hideLoading();
       document.getElementById('loginTerakhir').textContent = formatTanggalWaktuIndo(data.loginTerakhir);
+
+      // BARU: Username -- dipindah dari Profil Saya ke sini (Pengaturan
+      // Akun), sesuai instruksi: Profil Saya cuma menampilkan Username
+      // sebagai informasi, perubahan sesungguhnya lewat halaman ini.
+      document.getElementById('usernameSaatIni').textContent = data.username || '—';
+      const infoGanti = document.getElementById('infoGantiUsername');
+      const btnGanti = document.getElementById('btnGantiUsername');
+      const gu = data.gantiUsername || { boleh: true };
+      if (gu.boleh) {
+        infoGanti.textContent = '';
+        btnGanti.disabled = false;
+      } else {
+        infoGanti.textContent = 'Data ini belum dapat diubah saat ini.';
+        btnGanti.disabled = true;
+      }
+
       main.style.display = 'block';
     } catch (err) {
       hideLoading();
@@ -39,6 +55,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       showError(err.message || 'Gagal memuat pengaturan akun.');
     }
   }
+
+  // ---- Ganti username -- diporting dari profil.js, field tunggal +
+  // konfirmasi via dialog sebelum submit (bukan ketik-ulang).
+  document.getElementById('btnGantiUsername').addEventListener('click', async () => {
+    const baru = document.getElementById('inputUsernameBaru').value.trim().toLowerCase();
+    if (!baru) { showError('Username baru belum diisi.'); return; }
+    if (!confirm('Setelah diubah, Anda login memakai username "' + baru + '". Lanjutkan?')) return;
+    try {
+      showLoading('Mengubah username...');
+      await apiPost('gantiUsernameRelawan', { token: sesi.token, usernameBaru: baru });
+      hideLoading();
+      showSuccess('Username berhasil diubah menjadi ' + baru + '.');
+      document.getElementById('inputUsernameBaru').value = '';
+      await muatPengaturan();
+    } catch (err) {
+      hideLoading();
+      showError(err.message);
+    }
+  });
 
   document.getElementById('btnKeluar').addEventListener('click', async () => {
     try {
