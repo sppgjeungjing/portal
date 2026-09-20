@@ -1074,26 +1074,26 @@
     <details class="panel-block" style="margin-top:16px;">
       <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">Menu Hari Ini (menu makanan &amp; gizi harian)</summary>
       <div style="margin-top:12px;">
-        <p style="font-size:12px;color:var(--color-text-muted);margin:0 0 10px;">Tempel teks menu harian (format WhatsApp seperti biasa dikirim) di bawah, lalu klik "Baca Otomatis" — field di bawahnya akan terisi sendiri. Cek dulu isinya sebelum menekan Simpan.</p>
-        <textarea id="taTempelMenuHarian" rows="9" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--color-border);" placeholder="Tempel teks menu harian di sini..."></textarea>
-        <button type="button" class="btn-outline" id="btnBacaMenuHarian" style="margin-top:8px;">📋 Baca Otomatis dari Teks</button>
-        <p id="statusBacaMenuHarian" style="font-size:12px;margin:6px 0 0;"></p>
+        <p style="font-size:12px;color:var(--color-text-muted);margin:0 0 10px;">Tempel teks menu harian (format WhatsApp seperti biasa dikirim) di bawah — sistem otomatis membaca Menu, Komposisi, dan data gizi. Tanggal &amp; Hari terisi otomatis dari teks kalau ada, tapi tetap bisa diedit manual.</p>
+        <p style="font-size:12px;margin:0 0 10px;"><a href="qr-label-ompreng.html" target="_blank" rel="noopener">🏷️ Buka halaman QR Code Label Ompreng →</a></p>
 
-        <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
-          <input type="hidden" id="mhEditId" value="">
-          <div class="inline-form-relawan" style="flex-wrap:wrap;">
-            <input type="text" id="mhTanggal" placeholder="Tanggal (DD/MM/YY)" style="width:150px;">
-            <input type="text" id="mhHari" placeholder="Hari (mis. Senin)" style="width:130px;">
-          </div>
-          <input type="text" id="mhMenu" placeholder="Menu (mis. NASI + RENDANG SAPI + TAHU GORENG + ...)">
-          <input type="text" id="mhKomposisi" placeholder="Komposisi (mis. Nasi + lauk hewani + lauk nabati + sayur + buah)">
+        <input type="hidden" id="mhEditId" value="">
+        <div class="inline-form-relawan" style="flex-wrap:wrap;">
+          <input type="text" id="mhTanggal" placeholder="Tanggal (DD/MM/YY)" style="width:150px;">
+          <input type="text" id="mhHari" placeholder="Hari (mis. Senin)" style="width:130px;">
+        </div>
+        <textarea id="taTempelMenuHarian" rows="9" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--color-border);margin-top:10px;" placeholder="Tempel teks menu harian di sini, mis:&#10;📋 Data Menu Hari Senin 07/09/26&#10;Menu: NASI + RENDANG SAPI + TAHU GORENG + ...&#10;Komposisi: Nasi + lauk hewani + lauk nabati + sayur + buah&#10;Kandungan gizi/porsi:&#10;- Porsi kecil: 525,85 kkal | 20,09 g protein | ..."></textarea>
 
-          <div id="wadahGiziMenuHarian" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          <button type="button" class="btn-outline" id="btnPreviewMenuHarian">👁️ Preview</button>
+          <button type="button" class="btn-mini primary" id="btnSimpanMenuHarian">Simpan Menu Hari Ini</button>
+          <button type="button" class="btn-mini" id="btnBatalEditMenuHarian" style="display:none;">Batal Edit</button>
+        </div>
+        <p id="statusBacaMenuHarian" style="font-size:12px;margin:8px 0 0;"></p>
 
-          <div style="display:flex;gap:8px;">
-            <button type="button" class="btn-mini primary" id="btnSimpanMenuHarian" style="align-self:flex-start;">Simpan Menu Hari Ini</button>
-            <button type="button" class="btn-mini" id="btnBatalEditMenuHarian" style="align-self:flex-start;display:none;">Batal Edit</button>
-          </div>
+        <div id="previewMenuHarianWrap" style="display:none;margin-top:16px;border:1.5px dashed var(--color-border);border-radius:10px;padding:14px;background:#fafafa;">
+          <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted);margin:0 0 10px;">Pratinjau — belum tersimpan</p>
+          <div id="previewMenuHarianIsi"></div>
         </div>
 
         <div class="table-wrap" style="margin-top:16px;">

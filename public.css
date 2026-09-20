@@ -155,6 +155,24 @@ a { color: inherit; }
 .pub-menu-item .label { font-size: 13px; font-weight: 600; color: var(--pub-navy); }
 .pub-menu-item .val { font-size: 12px; color: var(--pub-ink-soft); margin-top: 2px; }
 
+/* BARU: gizi -- tabel lebar di desktop, card ringkas di layar sempit (§13) */
+.pub-gizi-table-wrap { display: block; overflow-x: auto; border: 1px solid var(--pub-line); border-radius: var(--pub-radius); }
+.pub-gizi-table-wrap table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.pub-gizi-table-wrap th, .pub-gizi-table-wrap td { padding: 11px 14px; text-align: left; }
+.pub-gizi-table-wrap thead tr { background: var(--pub-cream-soft); }
+.pub-gizi-table-wrap tbody tr { border-top: 1px solid var(--pub-line); }
+.pub-gizi-cards { display: none; }
+.pub-gizi-card {
+  background: var(--pub-cream-soft); border-radius: var(--pub-radius); padding: 14px 16px; margin-bottom: 10px;
+}
+.pub-gizi-card .judul { font-size: 12.5px; font-weight: 700; color: var(--pub-navy); text-transform: uppercase; letter-spacing: .03em; margin: 0 0 8px; padding-bottom: 8px; border-bottom: 1px solid var(--pub-line); }
+.pub-gizi-card .baris { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; color: var(--pub-ink-soft); }
+.pub-gizi-card .baris strong { color: var(--pub-navy); font-weight: 600; }
+@media (max-width: 640px) {
+  .pub-gizi-table-wrap { display: none; }
+  .pub-gizi-cards { display: block; }
+}
+
 /* ---- PENERIMA MANFAAT ---- */
 .pub-benef-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; }
 .pub-benef-card { border: 1px solid var(--pub-line); border-radius: var(--pub-radius); padding: 22px 18px; background: var(--pub-white); }

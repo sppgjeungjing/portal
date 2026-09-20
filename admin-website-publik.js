@@ -152,61 +152,25 @@
     }
   }
 
-  const KATEGORI_MENU = [
-    { key: 'kecil', label: 'Porsi Kecil' },
-    { key: 'besar', label: 'Porsi Besar' },
-    { key: 'balita', label: 'Balita' },
-    { key: 'bumil', label: 'Ibu Hamil' },
-    { key: 'busui', label: 'Ibu Menyusui' }
-  ];
-  const GIZI_MENU = [
-    { key: 'kkal', label: 'Kkal' },
-    { key: 'protein', label: 'g Protein' },
-    { key: 'lemak', label: 'g Lemak' },
-    { key: 'karbo', label: 'g Karbo' },
-    { key: 'serat', label: 'g Serat' }
-  ];
-
-  /** Render 5 baris (per kategori) x 5 kolom (per zat gizi) input teks -- dibuat sekali oleh JS, bukan ditulis tangan di HTML, supaya konsisten & gampang dirawat. */
-  function renderFormGiziMenuHarian_() {
-    const wadah = document.getElementById('wadahGiziMenuHarian');
-    if (!wadah || wadah.dataset.dirender) return; // cuma render sekali
-    wadah.dataset.dirender = '1';
-    wadah.innerHTML = KATEGORI_MENU.map(kat => `
-      <div>
-        <p style="font-size:12px;font-weight:700;color:var(--color-navy);margin:0 0 4px;">${kat.label}</p>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${GIZI_MENU.map(g => `<input type="text" id="gizi_${kat.key}_${g.key}" placeholder="${g.label}" style="width:100px;" title="${kat.label} — ${g.label}">`).join('')}
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function ambilNilaiGizi_(kat) {
-    const hasil = {};
-    GIZI_MENU.forEach(g => {
-      const el = document.getElementById('gizi_' + kat + '_' + g.key);
-      hasil[g.key] = el ? el.value.trim() : '';
-    });
-    return hasil;
-  }
-
-  function isiNilaiGizi_(kat, nilai) {
-    GIZI_MENU.forEach(g => {
-      const el = document.getElementById('gizi_' + kat + '_' + g.key);
-      if (el) el.value = (nilai && nilai[g.key]) || '';
-    });
+  /** Ikon per kata kunci umum makanan Indonesia -- dipakai preview (Admin) & bisa dipakai ulang di halaman publik. Fallback ke 🍽️ kalau tidak ada kata kunci yang cocok. */
+  function ikonMenuItem_(namaItem) {
+    const n = String(namaItem || '').toLowerCase();
+    const kamus = [
+      [/nasi/, '🍚'], [/rendang|sapi|daging|empal|semur/, '🥩'], [/ayam/, '🍗'],
+      [/ikan|bandeng|lele|nila/, '🐟'], [/tahu/, '🍢'], [/tempe/, '🍢'],
+      [/telur/, '🥚'], [/sayur|tumis|sop|bayam|kangkung|labu|wortel|kol/, '🥕'],
+      [/semangka|melon|pisang|pepaya|jeruk|apel|buah/, '🍉'],
+      [/susu/, '🥛'], [/roti/, '🍞'], [/mie|bihun/, '🍜']
+    ];
+    for (const [re, ikon] of kamus) { if (re.test(n)) return ikon; }
+    return '🍽️';
   }
 
   /**
-   * Membaca teks format WhatsApp yang biasa dikirim, mis.:
-   *   "📋 Data Menu Hari  Senin 07/09/26"
-   *   "Menu: NASI + RENDANG SAPI + ..."
-   *   "Komposisi: Nasi + lauk hewani + ..."
-   *   "- Porsi kecil: 525,85 kkal | 20,09 g protein | 23,63 g lemak | 57,425 g karbo | 0,9 g serat"
-   * Cukup toleran: spasi sebelum satuan boleh ada/tidak ada ("729,25kkal" atau
-   * "525,85 kkal" sama-sama kebaca), urutan baris bebas, baris yang tidak
-   * dikenali diabaikan (tidak menyebabkan error).
+   * Membaca teks format WhatsApp yang biasa dikirim -- diporting PERSIS
+   * SAMA dengan parser backend (parseTeksMenuHarian_ di WebsitePublik.gs)
+   * supaya hasil Preview di sini selalu konsisten dengan hasil Simpan.
+   * Kalau salah satu diubah, ubah juga yang satunya.
    */
   function baca_TeksMenuHarian_(teks) {
     const hasil = { tanggal: '', hari: '', menu: '', komposisi: '', gizi: {} };
@@ -216,9 +180,7 @@
     baris.forEach(b => {
       let m;
       if ((m = b.match(/Data Menu Hari\s+([A-Za-z]+)\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/i))) {
-        hasil.hari = m[1];
-        hasil.tanggal = m[2];
-        return;
+        hasil.hari = m[1]; hasil.tanggal = m[2]; return;
       }
       if (/^menu\s*:/i.test(b)) { hasil.menu = b.replace(/^menu\s*:/i, '').trim(); return; }
       if (/^komposisi\s*:/i.test(b)) { hasil.komposisi = b.replace(/^komposisi\s*:/i, '').trim(); return; }
@@ -246,25 +208,66 @@
     return { hasil, berhasil: !!(hasil.tanggal || hasil.menu || adaGiziTerbaca) };
   }
 
-  function pasangBacaOtomatisMenuHarian_() {
-    const btn = document.getElementById('btnBacaMenuHarian');
+  function renderPreviewMenuHarian_(hasil) {
+    const wrap = document.getElementById('previewMenuHarianWrap');
+    const isi = document.getElementById('previewMenuHarianIsi');
+    if (!wrap || !isi) return;
+
+    const itemMenu = String(hasil.menu || '').split('+').map(s => s.trim()).filter(Boolean);
+    let html = `<p style="font-size:13px;color:var(--color-text-muted);margin:0 0 10px;">${escapeHtml([hasil.hari, hasil.tanggal].filter(Boolean).join(', ') || 'Tanggal belum terbaca')}</p>`;
+
+    if (itemMenu.length) {
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-bottom:12px;">' +
+        itemMenu.map(it => `<div style="text-align:center;padding:10px 6px;background:#fff;border:1px solid var(--color-border);border-radius:8px;"><div style="font-size:22px;">${ikonMenuItem_(it)}</div><div style="font-size:10.5px;margin-top:4px;font-weight:600;">${escapeHtml(it)}</div></div>`).join('') +
+        '</div>';
+    } else {
+      html += '<p style="font-size:12.5px;color:#b9852f;">⚠️ Menu belum terbaca dari teks.</p>';
+    }
+    if (hasil.komposisi) {
+      html += `<p style="font-size:12.5px;margin:0 0 12px;"><strong>Komposisi:</strong> ${escapeHtml(hasil.komposisi)}</p>`;
+    }
+
+    const kategoriLabel = { kecil: 'Porsi Kecil', besar: 'Porsi Besar', balita: 'Balita', bumil: 'Ibu Hamil', busui: 'Ibu Menyusui' };
+    const barisGizi = Object.keys(kategoriLabel).map(k => ({ label: kategoriLabel[k], g: (hasil.gizi[k] || {}) }));
+    const adaGizi = barisGizi.some(x => x.g.kkal || x.g.protein || x.g.lemak || x.g.karbo || x.g.serat);
+    if (adaGizi) {
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">' +
+        barisGizi.map(x => `
+          <div style="background:#fff;border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;font-size:11.5px;">
+            <strong style="display:block;margin-bottom:4px;">${escapeHtml(x.label)}</strong>
+            ${x.g.kkal ? `${escapeHtml(x.g.kkal)} kkal<br>` : ''}${x.g.protein ? `${escapeHtml(x.g.protein)} g protein<br>` : ''}${x.g.lemak ? `${escapeHtml(x.g.lemak)} g lemak<br>` : ''}${x.g.karbo ? `${escapeHtml(x.g.karbo)} g karbo<br>` : ''}${x.g.serat ? `${escapeHtml(x.g.serat)} g serat` : ''}
+          </div>`).join('') +
+        '</div>';
+    } else {
+      html += '<p style="font-size:12.5px;color:#b9852f;">⚠️ Data gizi belum terbaca dari teks.</p>';
+    }
+
+    isi.innerHTML = html;
+    wrap.style.display = 'block';
+  }
+
+  function pasangPreviewMenuHarian_() {
+    const btn = document.getElementById('btnPreviewMenuHarian');
     const ta = document.getElementById('taTempelMenuHarian');
     const status = document.getElementById('statusBacaMenuHarian');
     if (!btn || !ta) return;
     btn.addEventListener('click', () => {
-      renderFormGiziMenuHarian_();
       const { hasil, berhasil } = baca_TeksMenuHarian_(ta.value);
       if (!berhasil) {
-        status.textContent = '⚠️ Tidak ada yang bisa dibaca dari teks ini. Isi manual saja di bawah.';
+        status.textContent = '⚠️ Tidak ada yang bisa dibaca dari teks ini. Cek lagi formatnya.';
         status.style.color = '#b9852f';
+        document.getElementById('previewMenuHarianWrap').style.display = 'none';
         return;
       }
-      document.getElementById('mhTanggal').value = hasil.tanggal;
-      document.getElementById('mhHari').value = hasil.hari;
-      document.getElementById('mhMenu').value = hasil.menu;
-      document.getElementById('mhKomposisi').value = hasil.komposisi;
-      KATEGORI_MENU.forEach(kat => isiNilaiGizi_(kat.key, hasil.gizi[kat.key]));
-      status.textContent = '✅ Berhasil dibaca. Cek dulu isinya di bawah sebelum Simpan.';
+      // Isi Tanggal/Hari otomatis HANYA kalau field itu masih kosong -- tidak
+      // menimpa kalau Admin sudah mengisi/mengedit manual sebelumnya.
+      const inputTanggal = document.getElementById('mhTanggal');
+      const inputHari = document.getElementById('mhHari');
+      if (!inputTanggal.value.trim() && hasil.tanggal) inputTanggal.value = hasil.tanggal;
+      if (!inputHari.value.trim() && hasil.hari) inputHari.value = hasil.hari;
+
+      renderPreviewMenuHarian_(hasil);
+      status.textContent = '✅ Pratinjau diperbarui. Ini belum tersimpan -- cek dulu lalu klik Simpan.';
       status.style.color = '#1a7a4c';
     });
   }
@@ -273,11 +276,9 @@
     document.getElementById('mhEditId').value = '';
     document.getElementById('mhTanggal').value = '';
     document.getElementById('mhHari').value = '';
-    document.getElementById('mhMenu').value = '';
-    document.getElementById('mhKomposisi').value = '';
-    KATEGORI_MENU.forEach(kat => isiNilaiGizi_(kat.key, {}));
     document.getElementById('taTempelMenuHarian').value = '';
     document.getElementById('statusBacaMenuHarian').textContent = '';
+    document.getElementById('previewMenuHarianWrap').style.display = 'none';
     document.getElementById('btnSimpanMenuHarian').textContent = 'Simpan Menu Hari Ini';
     document.getElementById('btnBatalEditMenuHarian').style.display = 'none';
   }
@@ -287,28 +288,32 @@
     const btnBatal = document.getElementById('btnBatalEditMenuHarian');
     if (!btn) return;
     btn.addEventListener('click', async () => {
-      const tanggal = document.getElementById('mhTanggal').value.trim();
-      if (!tanggal) { showError('Tanggal wajib diisi (format DD/MM/YY).'); return; }
+      const rawText = document.getElementById('taTempelMenuHarian').value.trim();
+      if (!rawText) { showError('Teks menu wajib diisi.'); return; }
       const payload = {
         token: token(),
-        tanggal: tanggal,
-        hari: document.getElementById('mhHari').value.trim(),
-        menu: document.getElementById('mhMenu').value.trim(),
-        komposisi: document.getElementById('mhKomposisi').value.trim(),
-        gizi: {}
+        rawText: rawText,
+        tanggal: document.getElementById('mhTanggal').value.trim(),
+        hari: document.getElementById('mhHari').value.trim()
       };
-      KATEGORI_MENU.forEach(kat => { payload.gizi[kat.key] = ambilNilaiGizi_(kat.key); });
 
       const editId = document.getElementById('mhEditId').value;
       btn.disabled = true;
       try {
+        let hasil;
         if (editId) {
           payload.id = editId;
-          await apiPost('updateMenuHarianPublik', payload);
+          hasil = await apiPost('updateMenuHarianPublik', payload);
           showSuccess('Menu Hari Ini diperbarui.');
         } else {
-          await apiPost('simpanMenuHarianPublik', payload);
+          hasil = await apiPost('simpanMenuHarianPublik', payload);
           showSuccess('Menu Hari Ini tersimpan dan langsung tampil di Website Publik.');
+        }
+        // Peringatan parsing (kalau ada) TIDAK membatalkan penyimpanan --
+        // data & teks asli tetap tersimpan, cuma diberi tahu bagian mana
+        // yang mungkin perlu dicek ulang di teksnya (sesuai instruksi §10/§20).
+        if (hasil && hasil.peringatan && hasil.peringatan.length) {
+          showError('Tersimpan, tapi ada yang perlu dicek: ' + hasil.peringatan.join(' | '));
         }
         kosongkanFormMenuHarian_();
         muatDaftarMenuHarian_();
@@ -322,7 +327,6 @@
   }
 
   async function muatDaftarMenuHarian_() {
-    renderFormGiziMenuHarian_();
     const tbody = document.getElementById('tbodyMenuHarian');
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Memuat...</div></td></tr>';
@@ -352,9 +356,15 @@
           document.getElementById('mhEditId').value = m.id;
           document.getElementById('mhTanggal').value = m.tanggal || '';
           document.getElementById('mhHari').value = m.hari || '';
-          document.getElementById('mhMenu').value = m.menu || '';
-          document.getElementById('mhKomposisi').value = m.komposisi || '';
-          KATEGORI_MENU.forEach(kat => isiNilaiGizi_(kat.key, m.gizi && m.gizi[kat.key]));
+          // Teks ASLI (RAW_TEXT) dimuat balik ke textarea -- sumber
+          // kebenaran tetap teks, bukan field yang sudah diparse. Kalau
+          // entri lama (dibuat sebelum RAW_TEXT ada) tidak punya teks
+          // asli, textarea dikosongkan -- Admin bisa tempel ulang teksnya.
+          document.getElementById('taTempelMenuHarian').value = m.rawText || '';
+          document.getElementById('previewMenuHarianWrap').style.display = 'none';
+          if (!m.rawText) {
+            showError('Entri ini dibuat sebelum fitur simpan-teks-asli ada -- tempel ulang teks menunya di sini lalu Simpan supaya lengkap.');
+          }
           document.getElementById('btnSimpanMenuHarian').textContent = 'Simpan Perubahan';
           document.getElementById('btnBatalEditMenuHarian').style.display = 'inline-block';
           document.getElementById('mhTanggal').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -392,8 +402,7 @@
       muatDataPenerimaan_();
       muatPenerimaManfaat_();
       muatMenuWebsite_();
-      renderFormGiziMenuHarian_();
-      pasangBacaOtomatisMenuHarian_();
+      pasangPreviewMenuHarian_();
       pasangSimpanMenuHarian_();
       muatDaftarMenuHarian_();
     });
