@@ -349,4 +349,37 @@
       showError(err.message);
     }
   });
+
+  // ---- Isi Absen Massal (BARU) ----
+  const btnIsiMassal = document.getElementById('btnIsiMassal');
+  const isiMassalTanggal = document.getElementById('isiMassalTanggal');
+  const isiMassalHasil = document.getElementById('isiMassalHasil');
+  if (btnIsiMassal) {
+    btnIsiMassal.addEventListener('click', async () => {
+      if (!isiMassalTanggal.value) { showError('Pilih tanggal dulu.'); return; }
+      const [y, m, d] = isiMassalTanggal.value.split('-');
+      const tanggalIndo = `${d}/${m}/${y}`;
+      if (!confirm(`Tandai SEMUA relawan aktif "Hadir" untuk tanggal ${tanggalIndo}?\n\nRelawan yang sudah punya data tidak akan ditimpa. Jam diambil otomatis dari shift masing-masing.`)) return;
+
+      btnIsiMassal.disabled = true;
+      isiMassalHasil.innerHTML = '<div class="empty-state">Memproses...</div>';
+      try {
+        const hasil = await apiPost('isiAbsensiHadirMassal', { token: token(), tanggal: tanggalIndo });
+        let html = `<p style="font-size:13px;color:#1a7a4c;font-weight:700;margin:0 0 8px;">✅ ${hasil.jumlahDitambahkan} relawan berhasil diisi Hadir.</p>`;
+        if (hasil.jumlahDilewatiSudahAda) {
+          html += `<p style="font-size:12.5px;color:var(--color-text-muted);margin:0 0 4px;">⏭️ ${hasil.jumlahDilewatiSudahAda} dilewati (sudah ada data): ${escapeHtml(hasil.dilewatiSudahAda.join(', '))}</p>`;
+        }
+        if (hasil.jumlahDilewatiTanpaShift) {
+          html += `<p style="font-size:12.5px;color:#b9852f;margin:0;">⚠️ ${hasil.jumlahDilewatiTanpaShift} dilewati (belum ada jadwal shift, perlu dicek manual): ${escapeHtml(hasil.dilewatiTanpaShift.join(', '))}</p>`;
+        }
+        isiMassalHasil.innerHTML = html;
+        showSuccess('Selesai mengisi absen massal.');
+      } catch (err) {
+        isiMassalHasil.innerHTML = '';
+        showError(err.message);
+      } finally {
+        btnIsiMassal.disabled = false;
+      }
+    });
+  }
 })();

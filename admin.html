@@ -678,6 +678,7 @@
       <button type="button" class="btn-mini primary shift-subtab" data-sub="divisi">Shift Divisi</button>
       <button type="button" class="btn-mini shift-subtab" data-sub="khusus">Penugasan Khusus</button>
       <button type="button" class="btn-mini shift-subtab" data-sub="koreksi">Koreksi Tanggal</button>
+      <button type="button" class="btn-mini shift-subtab" data-sub="isiMassal">Isi Absen Massal</button>
     </div>
 
     <!-- SHIFT DIVISI -->
@@ -744,6 +745,18 @@
         <button type="button" class="btn-mini primary" id="btnCariKoreksi">Cari</button>
       </div>
       <div id="koreksiHasil"></div>
+    </div>
+
+    <!-- ISI ABSEN MASSAL (BARU) -->
+    <div class="shift-sub" id="shiftSubIsiMassal" style="display:none;">
+      <p style="font-size:12.5px;color:var(--color-text-muted);margin:-4px 0 12px;">
+        Menandai SEMUA relawan aktif "Hadir" untuk 1 tanggal operasional sekaligus — dipakai kalau data absensi tanggal itu terhapus/hilang. Jam masuk/pulang diambil otomatis dari jadwal shift masing-masing (bukan diisi manual). Relawan yang SUDAH punya data di tanggal itu tidak akan ditimpa/didobelkan.
+      </p>
+      <div class="inline-form">
+        <input type="date" id="isiMassalTanggal">
+        <button type="button" class="btn-mini primary" id="btnIsiMassal">Isi Semua Hadir</button>
+      </div>
+      <div id="isiMassalHasil" style="margin-top:12px;"></div>
     </div>
   </div>
 
