@@ -437,9 +437,19 @@
     pk: document.getElementById('pmPk'), pb: document.getElementById('pmPb'),
     bumil: document.getElementById('pmBumil'), busui: document.getElementById('pmBusui'), balita: document.getElementById('pmBalita'),
     jumlahPreview: document.getElementById('pmJumlahPreview'),
+    budget: document.getElementById('pmBudget'),
+    keterangan: document.getElementById('pmKeterangan'),
+    urutanTampil: document.getElementById('pmUrutanTampil'),
     btnBatal: document.getElementById('btnBatalPM'),
-    tbody: document.getElementById('tbodyPenerimaManfaat')
+    tbody: document.getElementById('tbodyPenerimaManfaat'),
+    cari: document.getElementById('pmCari'),
+    filterOrientasi: document.getElementById('pmFilterOrientasi'),
+    filterStatus: document.getElementById('pmFilterStatus'),
+    rekapWrap: document.getElementById('pmRekapWrap')
   };
+  let pmDaftarTerakhir = []; // cache hasil fetch terakhir, dipakai search/filter client-side (dataset kecil, tidak perlu round-trip server tiap ketik)
+
+  function formatRupiahPM_(n) { return 'Rp' + Number(n || 0).toLocaleString('id-ID'); }
 
   function tampilkanFieldSesuaiKategoriPM_() {
     const isPesertaDidik = pmEl.kategori.value === 'PESERTA_DIDIK';
@@ -463,6 +473,7 @@
     pmEl.kategori.value = '';
     pmEl.instansi.value = '';
     pmEl.pk.value = 0; pmEl.pb.value = 0; pmEl.bumil.value = 0; pmEl.busui.value = 0; pmEl.balita.value = 0;
+    pmEl.budget.value = 0; pmEl.keterangan.value = ''; pmEl.urutanTampil.value = '';
     pmEl.fieldPesertaDidik.style.display = 'none';
     pmEl.field3B.style.display = 'none';
     pmEl.jumlahPreview.textContent = '0';
@@ -482,78 +493,131 @@
   [pmEl.pk, pmEl.pb, pmEl.bumil, pmEl.busui, pmEl.balita].forEach(el => {
     if (el) el.addEventListener('input', hitungJumlahPreviewPM_);
   });
+  [pmEl.cari, pmEl.filterOrientasi, pmEl.filterStatus].forEach(el => {
+    if (el) el.addEventListener('input', renderTabelPM_);
+  });
+
+  function renderRekapPM_() {
+    apiGet('getRekapPenerimaManfaatAdmin', { token: token() }).then(r => {
+      pmEl.rekapWrap.innerHTML = `
+        <div class="panel-block" style="flex:1;min-width:110px;padding:10px 12px;text-align:center;"><div style="font-size:11px;color:var(--color-text-muted);">Total Penerima</div><div style="font-size:18px;font-weight:800;color:var(--color-navy);">${r.totalPenerima}</div></div>
+        <div class="panel-block" style="flex:1;min-width:90px;padding:10px 12px;text-align:center;"><div style="font-size:11px;color:var(--color-text-muted);">PK</div><div style="font-size:16px;font-weight:700;">${r.totalPk}</div></div>
+        <div class="panel-block" style="flex:1;min-width:90px;padding:10px 12px;text-align:center;"><div style="font-size:11px;color:var(--color-text-muted);">PB</div><div style="font-size:16px;font-weight:700;">${r.totalPb}</div></div>
+        <div class="panel-block" style="flex:1;min-width:90px;padding:10px 12px;text-align:center;"><div style="font-size:11px;color:var(--color-text-muted);">Bumil</div><div style="font-size:16px;font-weight:700;">${r.totalBumil}</div></div>
+        <div class="panel-block" style="flex:1;min-width:90px;padding:10px 12px;text-align:center;"><div style="font-size:11px;color:var(--color-text-muted);">Busui</div><div style="font-size:16px;font-weight:700;">${r.totalBusui}</div></div>
+        <div class="panel-block" style="flex:1;min-width:90px;padding:10px 12px;text-align:center;"><div style="font-size:11px;color:var(--color-text-muted);">Balita</div><div style="font-size:16px;font-weight:700;">${r.totalBalita}</div></div>
+        <div class="panel-block" style="flex:1;min-width:140px;padding:10px 12px;text-align:center;background:#fff8ec;"><div style="font-size:11px;color:var(--color-text-muted);">Total Budget (internal)</div><div style="font-size:16px;font-weight:700;color:#8a5a12;">${formatRupiahPM_(r.totalBudget)}</div></div>
+      `;
+    }).catch(() => { pmEl.rekapWrap.innerHTML = ''; });
+  }
+
+  function renderTabelPM_() {
+    const cari = (pmEl.cari.value || '').trim().toLowerCase();
+    const forient = pmEl.filterOrientasi.value;
+    const fstatus = pmEl.filterStatus.value;
+    const hasil = pmDaftarTerakhir.filter(r => {
+      if (forient && r.kategori !== forient) return false;
+      if (fstatus && r.status !== fstatus) return false;
+      if (cari && r.id.toLowerCase().indexOf(cari) === -1 && String(r.instansi).toLowerCase().indexOf(cari) === -1) return false;
+      return true;
+    });
+
+    if (!hasil.length) {
+      pmEl.tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state">Tidak ada data yang cocok.</div></td></tr>';
+      return;
+    }
+
+    // Label Orientasi -- ditulis eksplisit (bukan ternary "bukan A -> B")
+    // supaya baris dengan kategori kosong/tidak dikenal (mis. kalau ada
+    // baris rusak yang lolos filter lain) tidak keliru tertulis "3B".
+    function labelOrientasi_(k) {
+      if (k === 'PESERTA_DIDIK') return 'Peserta Didik';
+      if (k === '3B') return '3B';
+      return '(tidak dikenal)';
+    }
+
+    pmEl.tbody.innerHTML = hasil.map(r => `
+      <tr data-id="${escapeHtml(r.id)}">
+        <td>${labelOrientasi_(r.kategori)}</td>
+        <td>${escapeHtml(r.instansi)}</td>
+        <td>${r.kategori === 'PESERTA_DIDIK' ? r.pk : '—'}</td>
+        <td>${r.kategori === 'PESERTA_DIDIK' ? r.pb : '—'}</td>
+        <td>${r.kategori === '3B' ? r.bumil : '—'}</td>
+        <td>${r.kategori === '3B' ? r.busui : '—'}</td>
+        <td>${r.kategori === '3B' ? r.balita : '—'}</td>
+        <td><strong>${r.jumlah}</strong></td>
+        <td style="font-size:12px;color:#8a5a12;">${formatRupiahPM_(r.budget)}</td>
+        <td><span class="badge ${r.status === 'AKTIF' ? 'aktif' : 'nonaktif'}">${escapeHtml(r.status)}</span></td>
+        <td style="white-space:nowrap;">
+          <button type="button" class="btn-mini btn-edit-pm">Edit</button>
+          <button type="button" class="btn-mini btn-toggle-pm" data-aktif="${r.status === 'AKTIF' ? '0' : '1'}">${r.status === 'AKTIF' ? 'Nonaktifkan' : 'Aktifkan'}</button>
+        </td>
+      </tr>`).join('');
+
+    pmEl.tbody.querySelectorAll('.btn-edit-pm').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tr = btn.closest('tr');
+        const id = tr.dataset.id;
+        const r = pmDaftarTerakhir.find(x => x.id === id);
+        if (!r) return;
+        pmEl.editId.value = r.id;
+        pmEl.kategori.value = r.kategori;
+        pmEl.instansi.value = r.instansi;
+        pmEl.pk.value = r.pk; pmEl.pb.value = r.pb;
+        pmEl.bumil.value = r.bumil; pmEl.busui.value = r.busui; pmEl.balita.value = r.balita;
+        pmEl.budget.value = r.budget || 0;
+        pmEl.keterangan.value = r.keterangan || '';
+        pmEl.urutanTampil.value = r.urutanTampil !== null && r.urutanTampil !== undefined ? r.urutanTampil : '';
+        tampilkanFieldSesuaiKategoriPM_();
+        document.getElementById('btnSimpanPM').textContent = 'Simpan Perubahan';
+        pmEl.form.style.display = 'flex';
+        pmEl.form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+    pmEl.tbody.querySelectorAll('.btn-toggle-pm').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.closest('tr').dataset.id;
+        const aktifBaru = btn.dataset.aktif === '1';
+        if (!confirm((aktifBaru ? 'Aktifkan' : 'Nonaktifkan') + ' data ini? ' + (aktifBaru ? '' : 'Data TIDAK dihapus, cuma disembunyikan dari Relawan & Website Publik.'))) return;
+        try {
+          await apiPost('setStatusPenerimaManfaat', { token: token(), id: id, aktif: aktifBaru });
+          showSuccess('Status diperbarui.');
+          muatPenerimaManfaat_();
+        } catch (err) { showError(err.message); }
+      });
+    });
+  }
 
   async function muatPenerimaManfaat_() {
     if (!pmEl.tbody) return;
-    pmEl.tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">Memuat...</div></td></tr>';
+    pmEl.tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state">Memuat...</div></td></tr>';
+    renderRekapPM_();
     try {
-      const daftar = await apiGet('getPenerimaManfaatAdmin', { token: token() });
-      if (!daftar.length) {
-        pmEl.tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">Belum ada data Penerima Manfaat.</div></td></tr>';
+      pmDaftarTerakhir = await apiGet('getPenerimaManfaatAdmin', { token: token() });
+      if (!pmDaftarTerakhir.length) {
+        pmEl.tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state">Belum ada data Penerima Manfaat.</div></td></tr>';
         return;
       }
-      pmEl.tbody.innerHTML = daftar.map(r => `
-        <tr data-id="${escapeHtml(r.id)}">
-          <td>${r.kategori === 'PESERTA_DIDIK' ? 'Peserta Didik' : '3B'}</td>
-          <td>${escapeHtml(r.instansi)}</td>
-          <td>${r.kategori === 'PESERTA_DIDIK' ? r.pk : '—'}</td>
-          <td>${r.kategori === 'PESERTA_DIDIK' ? r.pb : '—'}</td>
-          <td>${r.kategori === '3B' ? r.bumil : '—'}</td>
-          <td>${r.kategori === '3B' ? r.busui : '—'}</td>
-          <td>${r.kategori === '3B' ? r.balita : '—'}</td>
-          <td><strong>${r.jumlah}</strong></td>
-          <td><span class="badge ${r.status === 'AKTIF' ? 'aktif' : 'nonaktif'}">${escapeHtml(r.status)}</span></td>
-          <td style="white-space:nowrap;">
-            <button type="button" class="btn-mini btn-edit-pm">Edit</button>
-            <button type="button" class="btn-mini btn-toggle-pm" data-aktif="${r.status === 'AKTIF' ? '0' : '1'}">${r.status === 'AKTIF' ? 'Nonaktifkan' : 'Aktifkan'}</button>
-          </td>
-        </tr>`).join('');
-
-      pmEl.tbody.querySelectorAll('.btn-edit-pm').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const tr = btn.closest('tr');
-          const id = tr.dataset.id;
-          const r = daftar.find(x => x.id === id);
-          if (!r) return;
-          pmEl.editId.value = r.id;
-          pmEl.kategori.value = r.kategori;
-          pmEl.instansi.value = r.instansi;
-          pmEl.pk.value = r.pk; pmEl.pb.value = r.pb;
-          pmEl.bumil.value = r.bumil; pmEl.busui.value = r.busui; pmEl.balita.value = r.balita;
-          tampilkanFieldSesuaiKategoriPM_();
-          document.getElementById('btnSimpanPM').textContent = 'Simpan Perubahan';
-          pmEl.form.style.display = 'flex';
-          pmEl.form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
-      });
-      pmEl.tbody.querySelectorAll('.btn-toggle-pm').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.closest('tr').dataset.id;
-          const aktifBaru = btn.dataset.aktif === '1';
-          if (!confirm((aktifBaru ? 'Aktifkan' : 'Nonaktifkan') + ' data ini? ' + (aktifBaru ? '' : 'Data TIDAK dihapus, cuma disembunyikan dari Website Publik.'))) return;
-          try {
-            await apiPost('setStatusPenerimaManfaat', { token: token(), id: id, aktif: aktifBaru });
-            showSuccess('Status diperbarui.');
-            muatPenerimaManfaat_();
-          } catch (err) { showError(err.message); }
-        });
-      });
+      renderTabelPM_();
     } catch (err) {
-      pmEl.tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state" style="color:#b23a3a;">${escapeHtml(err.message)}</div></td></tr>`;
+      pmEl.tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state" style="color:#b23a3a;">${escapeHtml(err.message)}</div></td></tr>`;
     }
   }
 
   if (pmEl.form) {
     pmEl.form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!pmEl.kategori.value) { showError('Pilih kategori dulu.'); return; }
-      if (!pmEl.instansi.value.trim()) { showError('Nama instansi wajib diisi.'); return; }
+      if (!pmEl.kategori.value) { showError('Pilih orientasi dulu.'); return; }
+      if (!pmEl.instansi.value.trim()) { showError('Nama wajib diisi.'); return; }
       const payload = {
         token: token(),
         kategori: pmEl.kategori.value,
         instansi: pmEl.instansi.value.trim(),
         pk: pmEl.pk.value, pb: pmEl.pb.value,
-        bumil: pmEl.bumil.value, busui: pmEl.busui.value, balita: pmEl.balita.value
+        bumil: pmEl.bumil.value, busui: pmEl.busui.value, balita: pmEl.balita.value,
+        budget: pmEl.budget.value,
+        keterangan: pmEl.keterangan.value.trim(),
+        urutanTampil: pmEl.urutanTampil.value
       };
       const btnSimpan = document.getElementById('btnSimpanPM');
       btnSimpan.disabled = true; // anti-double-click

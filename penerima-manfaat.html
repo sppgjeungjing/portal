@@ -70,8 +70,8 @@
         <table style="width:100%;border-collapse:collapse;min-width:640px;font-size:13.5px;">
           <thead>
             <tr style="background:var(--pub-cream-soft);">
-              <th style="text-align:left;padding:12px 14px;">Kategori</th>
-              <th style="text-align:left;padding:12px 14px;">Instansi</th>
+              <th style="text-align:left;padding:12px 14px;">Orientasi</th>
+              <th style="text-align:left;padding:12px 14px;">Nama</th>
               <th style="text-align:right;padding:12px 10px;">PK</th>
               <th style="text-align:right;padding:12px 10px;">PB</th>
               <th style="text-align:right;padding:12px 10px;">Bumil</th>
@@ -144,7 +144,7 @@
 
         tabelBody.innerHTML = data.map(d => `
           <tr style="border-top:1px solid var(--pub-line);">
-            <td style="padding:11px 14px;">${d.kategori === 'PESERTA_DIDIK' ? 'Peserta Didik' : '3B'}</td>
+            <td style="padding:11px 14px;">${d.kategori === 'PESERTA_DIDIK' ? 'Peserta Didik' : (d.kategori === '3B' ? '3B' : '(tidak dikenal)')}</td>
             <td style="padding:11px 14px;">${d.instansi}</td>
             <td style="text-align:right;padding:11px 10px;">${d.kategori === 'PESERTA_DIDIK' ? formatRibuan(d.pk) : '—'}</td>
             <td style="text-align:right;padding:11px 10px;">${d.kategori === 'PESERTA_DIDIK' ? formatRibuan(d.pb) : '—'}</td>

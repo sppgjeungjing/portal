@@ -1042,13 +1042,22 @@
     <details class="panel-block" style="margin-top:16px;">
       <summary style="cursor:pointer;font-weight:700;color:var(--color-navy);font-size:14px;">Penerima Manfaat — Rinci per Instansi (Peserta Didik / 3B)</summary>
       <div style="margin-top:12px;">
-        <p style="font-size:12px;color:var(--color-text-muted);margin:0 0 10px;">Ini yang tampil sebagai tabel rinci (per sekolah/posyandu) di Website Publik, beda dari ringkasan kategori di atas.</p>
+        <p style="font-size:12px;color:var(--color-text-muted);margin:0 0 10px;">Ini yang tampil sebagai tabel rinci (per sekolah/posyandu) di Website Publik dan Relawan, beda dari ringkasan kategori di atas.</p>
+
+        <div id="pmRekapWrap" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;"></div>
+
+        <div class="inline-form" style="margin-bottom:10px;">
+          <input type="text" id="pmCari" placeholder="Cari ID / Nama...">
+          <select id="pmFilterOrientasi"><option value="">Semua Orientasi</option><option value="PESERTA_DIDIK">Peserta Didik</option><option value="3B">3B</option></select>
+          <select id="pmFilterStatus"><option value="">Semua Status</option><option value="AKTIF">Aktif</option><option value="NONAKTIF">Nonaktif</option></select>
+        </div>
+
         <button type="button" class="btn-outline" id="btnBukaFormPM">+ Tambah Penerima Manfaat</button>
 
         <form id="formPenerimaManfaat" style="display:none;margin-top:12px;flex-direction:column;gap:10px;" class="inline-form">
           <input type="hidden" id="pmEditId" value="">
           <select id="pmKategori" required>
-            <option value="" disabled selected>Pilih Kategori</option>
+            <option value="" disabled selected>Pilih Orientasi</option>
             <option value="PESERTA_DIDIK">Peserta Didik</option>
             <option value="3B">3B (Bumil / Busui / Balita)</option>
           </select>
@@ -1069,6 +1078,11 @@
           </div>
 
           <p style="font-size:13px;margin:0;">Jumlah (otomatis): <strong id="pmJumlahPreview">0</strong></p>
+
+          <label style="font-size:12.5px;">Budget (Rp, internal — tidak tampil ke Relawan/Publik)<input type="number" id="pmBudget" min="0" value="0" style="width:100%;margin-top:4px;"></label>
+          <input type="text" id="pmKeterangan" placeholder="Keterangan (opsional, internal)">
+          <label style="font-size:12.5px;">Urutan Tampil (opsional — angka lebih kecil tampil lebih dulu)<input type="number" id="pmUrutanTampil" style="width:100%;margin-top:4px;" placeholder="Kosongkan untuk urutan otomatis"></label>
+
           <div style="display:flex;gap:8px;">
             <button type="submit" class="btn-mini primary" id="btnSimpanPM">Simpan</button>
             <button type="button" class="btn-mini" id="btnBatalPM">Batal</button>
@@ -1077,8 +1091,8 @@
 
         <div class="table-wrap" style="margin-top:12px;">
           <table>
-            <thead><tr><th>Kategori</th><th>Instansi</th><th>PK</th><th>PB</th><th>Bumil</th><th>Busui</th><th>Balita</th><th>Jumlah</th><th>Status</th><th>Aksi</th></tr></thead>
-            <tbody id="tbodyPenerimaManfaat"><tr><td colspan="10"><div class="empty-state">Memuat...</div></td></tr></tbody>
+            <thead><tr><th>Orientasi</th><th>Nama</th><th>PK</th><th>PB</th><th>Bumil</th><th>Busui</th><th>Balita</th><th>Jumlah</th><th>Budget</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="tbodyPenerimaManfaat"><tr><td colspan="11"><div class="empty-state">Memuat...</div></td></tr></tbody>
           </table>
         </div>
       </div>
