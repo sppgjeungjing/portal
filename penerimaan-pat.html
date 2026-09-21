@@ -4,8 +4,8 @@
 <script src="terapkan-preferensi.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Informasi — SPPG Jeungjing</title>
-<meta name="description" content="Informasi SPPG Jeungjing">
+<title>Penerima Manfaat — SPPG Jeungjing</title>
+<meta name="description" content="Data Penerima Manfaat Program Anak Terpadu (PAT) SPPG Jeungjing">
 <link rel="icon" href="assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,8 +62,8 @@
 
     <p class="shell-nav-group-title">SIPIKA</p>
     <a href="notifikasi.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 21h4"/></svg></span><span>Notifikasi</span></a>
-    <a href="informasi.html" class="shell-nav-link active"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.01"/></svg></span><span>Informasi</span></a>
-    <a href="penerimaan-pat.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>Penerima Manfaat</span></a>
+    <a href="informasi.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.01"/></svg></span><span>Informasi</span></a>
+    <a href="penerimaan-pat.html" class="shell-nav-link active"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>Penerima Manfaat</span></a>
     <a href="dokumen.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></span><span>Dokumen</span></a>
     <a href="bantuan.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.9.4-1.5 1-1.5 2.2"/><path d="M12 17v.01"/></svg></span><span>Bantuan</span></a>
 
@@ -96,21 +96,30 @@
       <main class="shell-content">
 <a href="dashboard.html" class="shell-back"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg> Kembali</a>
   <div class="shell-page-head">
-    <div class="shell-page-head-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5v.01"/></svg></div>
+    <div class="shell-page-head-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
     <div>
-      <h1>Informasi</h1>
-      <p>Pengumuman dan informasi terbaru dari SPPG Jeungjing.</p>
+      <h1>Penerima Manfaat</h1>
+      <p>Data penerima manfaat Program Anak Terpadu (PAT) — Peserta Didik &amp; 3B.</p>
     </div>
   </div>
 
-        <div id="informasiMain" style="display:none;">
-          <div id="informasiList"></div>
+        <div id="pmMain" style="display:none;">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;" id="pmRelawanRekap"></div>
+
+          <input type="text" id="pmRelawanCari" placeholder="Cari ID / Nama..." style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1.5px solid var(--color-border);font-size:13px;margin-bottom:12px;">
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Nama</th><th>Orientasi</th><th>PK</th><th>PB</th><th>Bumil</th><th>Busui</th><th>Balita</th><th>Jumlah</th></tr></thead>
+              <tbody id="pmRelawanTbody"><tr><td colspan="9"><div class="empty-state">Memuat...</div></td></tr></tbody>
+            </table>
+          </div>
         </div>
 
         <div class="toast is-hidden" id="errorToast" role="alert"></div>
         <div class="loading-overlay is-hidden" id="loadingOverlay">
           <div class="spinner"></div>
-          <p id="loadingText">Memuat informasi...</p>
+          <p id="loadingText">Memuat data...</p>
         </div>
       </main>
   <footer class="shell-footer">
@@ -126,6 +135,6 @@
 <script src="common.js?v=20260903b"></script>
 <script src="auth-relawan.js?v=20260903b"></script>
 <script src="app-shell.js?v=20260903b"></script>
-<script src="informasi.js?v=20260903b"></script>
+<script src="penerimaan-pat.js?v=20260903b"></script>
 </body>
 </html>
