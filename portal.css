@@ -320,6 +320,56 @@
 .riwayat-badge.cuti { background: var(--color-info-bg); color: var(--color-info); }
 .riwayat-badge.belum-absen { background: var(--color-muted-bg); color: var(--color-muted-text); }
 
+/* ---- SIRAGA: tab bar horizontal-scroll + panel ---- */
+.stok-tabbar {
+  display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 10px; margin-bottom: 16px; scrollbar-width: none;
+}
+.stok-tabbar::-webkit-scrollbar { display: none; }
+.stok-subtab {
+  flex: 0 0 auto; padding: 9px 16px; border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border); background: var(--color-surface);
+  color: var(--color-text-muted); font-size: 13px; font-weight: 700;
+  font-family: inherit; cursor: pointer; white-space: nowrap;
+}
+.stok-sub { display: block; }
+
+/* ---- SIRAGA: searchable dropdown (Barang/Supplier) ---- */
+.searchable-dropdown { position: relative; }
+.searchable-dropdown-input {
+  width: 100%; box-sizing: border-box; padding: 11px 12px;
+  border-radius: var(--radius-sm); border: 1px solid var(--color-border);
+  background: var(--color-surface); font-family: inherit; font-size: 14px; color: var(--color-text);
+}
+.searchable-dropdown-input:focus { outline: none; border-color: var(--color-sky); }
+.searchable-dropdown-panel {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-card);
+  max-height: 260px; overflow-y: auto;
+}
+.searchable-dropdown-panel.is-hidden { display: none; }
+.searchable-dropdown-item {
+  width: 100%; text-align: left; padding: 10px 14px; border: none; background: none;
+  font-family: inherit; font-size: 13.5px; color: var(--color-text); cursor: pointer;
+  display: block; border-bottom: 1px solid var(--color-border);
+}
+.searchable-dropdown-item:last-child { border-bottom: none; }
+.searchable-dropdown-item:hover, .searchable-dropdown-item:focus { background: var(--color-muted-bg); }
+.searchable-dropdown-item small { display: block; color: var(--color-text-muted); font-size: 11.5px; margin-top: 2px; }
+.searchable-dropdown-empty { padding: 12px 14px; font-size: 13px; color: var(--color-text-muted); }
+.searchable-dropdown-selected {
+  margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm);
+  background: var(--color-muted-bg); font-size: 13px; display: flex; justify-content: space-between; align-items: center;
+}
+.searchable-dropdown-selected button { border: none; background: none; color: var(--color-danger); font-size: 16px; cursor: pointer; line-height: 1; }
+
+/* ---- SIRAGA: baris item transaksi (Masuk/Keluar/Transfer/Pemusnahan) ---- */
+.siraga-item-row { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 10px; position: relative; }
+.siraga-item-row-remove { position: absolute; top: 8px; right: 8px; border: none; background: none; color: var(--color-danger); font-size: 18px; cursor: pointer; line-height: 1; }
+.siraga-item-hint { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }
+.siraga-item-hint.warn { color: var(--color-warning); font-weight: 700; }
+
 /* ---- Riwayat Presensi roster-first: kartu periode, grid statistik, item sbg tombol, detail sheet ---- */
 .periode-card {
   background: linear-gradient(135deg, var(--color-navy), var(--color-navy-deep));
