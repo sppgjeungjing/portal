@@ -1,18 +1,120 @@
-// SPPG JEUNGJING — LOGIC HALAMAN RIWAYAT ABSENSI (riwayat.html)
-// Menggunakan fungsi bersama dari common.js (apiGet, dst.) dan auth-relawan.js.
+// SPPG JEUNGJING — LOGIC HALAMAN RIWAYAT PRESENSI (riwayat.html)
+// Roster-first: periode aktif otomatis, grid 2x3 statistik, card vertikal,
+// detail sheet saat kartu ditekan. Menggunakan fungsi bersama dari
+// common.js (apiGet, dst.) dan auth-relawan.js.
 
-const NAMA_HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', "Jumat", 'Sabtu'];
+const NAMA_HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const NAMA_BULAN_SINGKAT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const NAMA_BULAN_PANJANG = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-/** tanggal dalam format "dd/MM/yyyy" -> objek Date. */
 function parseTanggalDMY(tanggalStr) {
   const [dd, mm, yyyy] = tanggalStr.split('/').map(Number);
   return new Date(yyyy, mm - 1, dd);
 }
 
+function formatTanggalPanjang(tanggalStr) {
+  const d = parseTanggalDMY(tanggalStr);
+  return `${d.getDate()} ${NAMA_BULAN_PANJANG[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 function badgeClassUntukStatus(status) {
-  const peta = { 'Hadir': 'hadir', 'Terlambat': 'terlambat', 'Izin': 'izin', 'Sakit': 'sakit', 'Tidak Hadir': 'tidak-hadir', 'Tidak Ada Jadwal': 'tidak-ada-jadwal', 'Belum Berjalan': 'belum-berjalan' };
-  return peta[status] || 'tidak-hadir';
+  const peta = {
+    'HADIR': 'hadir', 'HADIR LENGKAP': 'hadir', 'TERLAMBAT': 'terlambat',
+    'IZIN': 'izin', 'SAKIT': 'sakit', 'CUTI': 'cuti',
+    'TIDAK HADIR': 'tidak-hadir', 'BELUM ABSEN': 'belum-absen', 'BELUM PULANG': 'terlambat'
+  };
+  return peta[status] || 'belum-absen';
+}
+
+function labelStatus(status) {
+  const peta = { 'HADIR LENGKAP': 'HADIR' };
+  return peta[status] || status;
+}
+
+let dataRiwayatTerkini = [];
+
+function renderKartuRiwayat(items) {
+  const list = document.getElementById('riwayatList');
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-state">Belum ada jadwal pada periode ini.</div>';
+    return;
+  }
+  list.innerHTML = items.map((r, i) => {
+    const d = parseTanggalDMY(r.tanggal);
+    const namaHari = NAMA_HARI[d.getDay()];
+    const tglSingkat = `${d.getDate()} ${NAMA_BULAN_SINGKAT[d.getMonth()]}`;
+    const jadwalText = (r.jamJadwalMasuk || '–') + (r.jamJadwalPulang ? ' – ' + r.jamJadwalPulang.slice(0, 5) : '');
+    return `
+    <button type="button" class="riwayat-item is-${badgeClassUntukStatus(r.status)}" data-idx="${i}">
+      <div class="riwayat-item-date">
+        <span class="riwayat-day-name">${namaHari}</span>
+        <span class="riwayat-day-num">${tglSingkat}</span>
+      </div>
+      <div class="riwayat-item-detail">
+        <div class="riwayat-item-top">
+          <strong class="riwayat-item-shift">${escapeHtml(r.namaShift || r.divisi || '')}</strong>
+          <span class="riwayat-badge ${badgeClassUntukStatus(r.status)}">${labelStatus(r.status)}</span>
+        </div>
+        <div class="riwayat-item-jam">Jadwal ${jadwalText.slice(0, 5) === '–' ? jadwalText : jadwalText}</div>
+        <div class="riwayat-item-jam">Masuk ${r.jamMasuk ? r.jamMasuk.slice(0, 5) : '—'} · Pulang ${r.jamPulang ? r.jamPulang.slice(0, 5) : '—'}</div>
+      </div>
+    </button>`;
+  }).join('');
+
+  list.querySelectorAll('.riwayat-item').forEach(el => {
+    el.addEventListener('click', () => bukaDetailSheet(items[Number(el.dataset.idx)]));
+  });
+}
+
+function barisDetail(label, value) {
+  if (value === null || value === undefined || value === '') return '';
+  return `<div class="detail-row"><span class="detail-row-label">${label}</span><span class="detail-row-value">${value}</span></div>`;
+}
+
+function bukaDetailSheet(r) {
+  const body = document.getElementById('detailSheetBody');
+  const d = parseTanggalDMY(r.tanggal);
+  const namaHari = NAMA_HARI[d.getDay()];
+
+  let html = `
+    <div class="detail-sheet-head">
+      <span class="riwayat-badge ${badgeClassUntukStatus(r.status)}">${labelStatus(r.status)}</span>
+      <h2>${namaHari}, ${formatTanggalPanjang(r.tanggal)}</h2>
+    </div>
+    <div class="detail-section">
+      ${barisDetail('Divisi', escapeHtml(r.divisi || '-'))}
+      ${barisDetail('Jadwal Shift', escapeHtml(r.namaShift || '-'))}
+      ${barisDetail('Jam Jadwal', (r.jamJadwalMasuk || '–') + (r.jamJadwalPulang ? ' – ' + r.jamJadwalPulang : ''))}
+      ${barisDetail('Jam Masuk Aktual', r.jamMasuk ? r.jamMasuk.slice(0, 5) : '—')}
+      ${barisDetail('Jam Pulang Aktual', r.jamPulang ? r.jamPulang.slice(0, 5) : '—')}
+      ${r.keterlambatanMenit > 0 ? barisDetail('Keterlambatan', r.keterlambatanMenit + ' menit') : ''}
+    </div>`;
+
+  if (r.masuk) {
+    html += `
+    <p class="detail-section-title">Presensi Masuk</p>
+    <div class="detail-section">
+      ${barisDetail('Waktu', r.masuk.jam ? r.masuk.jam.slice(0, 5) : '-')}
+      ${r.masuk.jarakMeter !== null ? barisDetail('Jarak dari Lokasi', '±' + r.masuk.jarakMeter + ' m') : ''}
+      ${r.masuk.fotoUrl ? `<a href="${r.masuk.fotoUrl}" target="_blank" rel="noopener" class="detail-foto-link">Lihat Swafoto Masuk →</a>` : ''}
+    </div>`;
+  }
+  if (r.pulang) {
+    html += `
+    <p class="detail-section-title">Presensi Pulang</p>
+    <div class="detail-section">
+      ${barisDetail('Waktu', r.pulang.jam ? r.pulang.jam.slice(0, 5) : '-')}
+      ${r.pulang.jarakMeter !== null ? barisDetail('Jarak dari Lokasi', '±' + r.pulang.jarakMeter + ' m') : ''}
+      ${r.pulang.fotoUrl ? `<a href="${r.pulang.fotoUrl}" target="_blank" rel="noopener" class="detail-foto-link">Lihat Swafoto Pulang →</a>` : ''}
+    </div>`;
+  }
+
+  body.innerHTML = html;
+  document.getElementById('detailSheetOverlay').classList.remove('is-hidden');
+}
+
+function tutupDetailSheet() {
+  document.getElementById('detailSheetOverlay').classList.add('is-hidden');
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -22,61 +124,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  document.getElementById('btnTutupDetail').addEventListener('click', tutupDetailSheet);
+  document.getElementById('detailSheetOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'detailSheetOverlay') tutupDetailSheet();
+  });
+
   const main = document.getElementById('riwayatMain');
-  const list = document.getElementById('riwayatList');
+  const kosong = document.getElementById('riwayatKosong');
 
   try {
-    showLoading('Memuat riwayat absensi...');
+    showLoading('Memuat riwayat presensi...');
     const hasil = await apiGet('getRiwayatAbsensiRelawan', { token: sesi.token });
     hideLoading();
 
-    // Subjudul mengikuti PERIODE AKTIF dari data Admin -- bukan teks tetap.
-    const sub = document.getElementById('riwayatSub');
-    if (sub) {
-      sub.textContent = hasil.periode
-        ? `Periode ${hasil.periode.nama} (${hasil.periode.tanggalMulai} – ${hasil.periode.tanggalSelesai})`
-        : 'Belum ada periode kerja yang dibuat Admin.';
-    }
-
-    const riwayat = hasil.items || [];
-    if (!riwayat.length) {
-      list.innerHTML = '<div class="empty-state">Belum ada tanggal operasional aktif pada periode ini.</div>';
-      main.style.display = 'block';
+    if (!hasil.periode) {
+      kosong.style.display = 'block';
       return;
     }
 
-    list.innerHTML = riwayat.map(r => {
-      const d = parseTanggalDMY(r.tanggal);
-      const namaHari = NAMA_HARI[d.getDay()];
-      const tglSingkat = `${d.getDate()} ${NAMA_BULAN_SINGKAT[d.getMonth()]}`;
-      const jamText = (r.jamMasuk || r.jamPulang)
-        ? `Masuk ${r.jamMasuk ? r.jamMasuk.slice(0, 5) : '—'} · Pulang ${r.jamPulang ? r.jamPulang.slice(0, 5) : '—'}`
-        : (r.akanDatang ? 'Jadwal operasional mendatang' : 'Tidak ada catatan absensi');
+    document.getElementById('periodeRange').textContent = `${hasil.periode.nama} (${hasil.periode.tanggalMulai} – ${hasil.periode.tanggalSelesai})`;
+    document.getElementById('periodeTotalJadwal').textContent = hasil.totalJadwal;
 
-      return `
-      <div class="riwayat-item is-${badgeClassUntukStatus(r.status)}">
-        <div class="riwayat-item-date">
-          <span class="riwayat-day-name">${namaHari}</span>
-          <span class="riwayat-day-num">${tglSingkat}</span>
-        </div>
-        <div class="riwayat-item-detail">
-          <div class="riwayat-item-top">
-            <span class="riwayat-badge ${badgeClassUntukStatus(r.status)}">${r.status}</span>
-          </div>
-          <div class="riwayat-item-jam">${jamText}</div>
-          ${r.keterangan ? `<div class="riwayat-item-ket">${escapeHtml(r.keterangan)}</div>` : ''}
-        </div>
-      </div>`;
-    }).join('');
+    const s = hasil.stats || {};
+    document.getElementById('statHadir').textContent = s.hadir || 0;
+    document.getElementById('statTerlambat').textContent = s.terlambat || 0;
+    document.getElementById('statIzin').textContent = s.izin || 0;
+    document.getElementById('statSakit').textContent = s.sakit || 0;
+    document.getElementById('statCuti').textContent = s.cuti || 0;
+    document.getElementById('statTidakHadir').textContent = s.tidakHadir || 0;
+
+    dataRiwayatTerkini = hasil.items || [];
+    renderKartuRiwayat(dataRiwayatTerkini);
 
     main.style.display = 'block';
   } catch (err) {
     hideLoading();
-    // OPTIMASI: sebelumnya SEMUA error di sini (termasuk gangguan
-    // jaringan/timeout biasa) langsung dianggap "sesi berakhir" dan
-    // memaksa kembali ke Login -- padahal error jaringan BUKAN berarti
-    // sesinya tidak valid. Sekarang dibedakan: cuma redirect ke Login
-    // kalau pesannya memang menandakan sesi tidak valid/berakhir.
     if (apakahErrorSesiTidakValid(err.message)) {
       hapusSesiRelawan();
       simpanNotisLogin(err.message || 'Sesi telah berakhir. Silakan login kembali.');
@@ -84,13 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     showError(err.message || 'Gagal memuat riwayat.');
-    main.innerHTML = `
-      <div class="empty-state" style="padding:40px 20px;text-align:center;">
-        <p style="margin:0 0 12px;font-size:14px;color:#55606f;">Data belum dapat dimuat. Periksa koneksi internet Anda.</p>
-        <button type="button" id="btnCobaLagiRiwayat" class="btn-outline">↻ Coba Lagi</button>
-      </div>`;
-    main.style.display = 'block';
-    const btnCobaLagi = document.getElementById('btnCobaLagiRiwayat');
-    if (btnCobaLagi) btnCobaLagi.addEventListener('click', () => window.location.reload());
+    kosong.textContent = 'Data belum dapat dimuat. Periksa koneksi internet Anda.';
+    kosong.style.display = 'block';
   }
 });

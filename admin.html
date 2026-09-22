@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=20260903c">
+<link rel="stylesheet" href="portal.css?v=20260922a">
 <link rel="stylesheet" href="admin.css?v=20260903c">
 <link rel="stylesheet" href="app-shell.css?v=20260903c">
 <link rel="stylesheet" href="rebrand.css?v=20260903c">
@@ -89,6 +90,8 @@
       <p class="shell-nav-group-title">SIPRES</p>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelHarian"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M9 12l2 2 4-4"/></svg></span><span>Rekap Harian</span></button>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelDuaMinggu"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><span>Rekap 2 Minggu</span></button>
+      <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelMonitoringPresensi"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg></span><span>Monitoring Presensi</span></button>
+      <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelPengajuanKetidakhadiranAdmin"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M12 9v6"/><circle cx="12" cy="12" r="9"/></svg></span><span>Pengajuan Ketidakhadiran</span></button>
 
       <p class="shell-nav-group-title">SIKOP</p>
       <button type="button" class="shell-nav-link admin-tab-btn" data-panel="panelPeriode"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16"/><path d="M8 3v4"/><path d="M16 3v4"/></svg></span><span>Periode Kerja</span></button>
@@ -398,6 +401,79 @@
         <tbody id="tbodyDuaMinggu"><tr><td colspan="8"><div class="empty-state">Pilih periode lalu klik Tampilkan.</div></td></tr></tbody>
       </table>
     </div>
+  </div>
+
+  <!-- MONITORING PRESENSI (roster-first, §I-§M) -->
+  <div class="admin-panel" id="panelMonitoringPresensi">
+    <div class="shell-page-head">
+      <div class="shell-page-head-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg></div>
+      <div><h1 style="font-size:18px;margin:0;color:var(--color-navy);">Monitoring Presensi</h1><p style="font-size:13px;margin:2px 0 0;color:var(--color-text-muted);" id="monitoringSub">Memuat periode aktif...</p></div>
+    </div>
+
+    <div class="admin-stat-grid">
+      <div class="admin-stat-card"><div class="admin-stat-value" id="monTotalJadwal">–</div><div class="admin-stat-label">Total Jadwal</div></div>
+      <div class="admin-stat-card accent-success"><div class="admin-stat-value" id="monHadir">–</div><div class="admin-stat-label">Hadir</div></div>
+      <div class="admin-stat-card accent-warning"><div class="admin-stat-value" id="monTerlambat">–</div><div class="admin-stat-label">Terlambat</div></div>
+      <div class="admin-stat-card accent-info"><div class="admin-stat-value" id="monIzin">–</div><div class="admin-stat-label">Izin</div></div>
+      <div class="admin-stat-card"><div class="admin-stat-value" id="monSakit">–</div><div class="admin-stat-label">Sakit</div></div>
+      <div class="admin-stat-card accent-danger"><div class="admin-stat-value" id="monTidakHadir">–</div><div class="admin-stat-label">Tidak Hadir</div></div>
+    </div>
+
+    <div class="filter-bar">
+      <select id="monFilterTanggalOperasional"></select>
+      <select id="monFilterDivisi"><option value="">Semua Divisi</option></select>
+      <select id="monFilterShift"><option value="">Semua Shift</option></select>
+      <select id="monFilterStatus">
+        <option value="">Semua Status</option>
+        <option value="HADIR">Hadir</option>
+        <option value="TERLAMBAT">Terlambat</option>
+        <option value="IZIN">Izin</option>
+        <option value="SAKIT">Sakit</option>
+        <option value="CUTI">Cuti</option>
+        <option value="BELUM ABSEN">Belum Absen</option>
+        <option value="BELUM PULANG">Belum Pulang</option>
+      </select>
+      <button class="btn-mini primary" id="btnMuatMonitoring">Tampilkan</button>
+    </div>
+
+    <p class="section-title">Daftar Presensi</p>
+    <div id="monitoringList" class="riwayat-list"></div>
+    <div id="monitoringKosong" class="empty-state" style="display:none;">Tidak ada data pada filter ini.</div>
+  </div>
+
+  <!-- PENGAJUAN KETIDAKHADIRAN — ADMIN (§N-§T) -->
+  <div class="admin-panel" id="panelPengajuanKetidakhadiranAdmin">
+    <div class="shell-page-head">
+      <div class="shell-page-head-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M12 9v6"/><circle cx="12" cy="12" r="9"/></svg></div>
+      <div><h1 style="font-size:18px;margin:0;color:var(--color-navy);">Pengajuan Ketidakhadiran</h1><p style="font-size:13px;margin:2px 0 0;color:var(--color-text-muted);">Proses pengajuan Izin, Sakit, dan Cuti dari relawan.</p></div>
+    </div>
+
+    <div class="admin-stat-grid">
+      <div class="admin-stat-card accent-warning"><div class="admin-stat-value" id="pkMenunggu">–</div><div class="admin-stat-label">Menunggu</div></div>
+      <div class="admin-stat-card accent-success"><div class="admin-stat-value" id="pkDisetujui">–</div><div class="admin-stat-label">Disetujui</div></div>
+      <div class="admin-stat-card accent-danger"><div class="admin-stat-value" id="pkDitolak">–</div><div class="admin-stat-label">Ditolak</div></div>
+    </div>
+
+    <div class="filter-bar">
+      <select id="pkFilterStatus">
+        <option value="MENUNGGU">Menunggu</option>
+        <option value="DISETUJUI">Disetujui</option>
+        <option value="DITOLAK">Ditolak</option>
+        <option value="">Semua Status</option>
+      </select>
+      <select id="pkFilterJenis">
+        <option value="">Semua Jenis</option>
+        <option value="IZIN">Izin</option>
+        <option value="SAKIT">Sakit</option>
+        <option value="CUTI">Cuti</option>
+      </select>
+      <select id="pkFilterDivisi"><option value="">Semua Divisi</option></select>
+      <button class="btn-mini primary" id="btnMuatPengajuanAdmin">Tampilkan</button>
+    </div>
+
+    <p class="section-title">Daftar Pengajuan</p>
+    <div id="pengajuanAdminList" class="riwayat-list"></div>
+    <div id="pengajuanAdminKosong" class="empty-state" style="display:none;">Tidak ada pengajuan pada filter ini.</div>
   </div>
 
   <!-- PERIODE KERJA -->
@@ -1247,6 +1323,34 @@
 </div>
 
 <div class="toast is-hidden" id="errorToast" role="alert"></div>
+<div class="detail-sheet-overlay is-hidden" id="monDetailOverlay">
+  <div class="detail-sheet" id="monDetailSheet">
+    <div class="detail-sheet-handle"></div>
+    <button type="button" class="detail-sheet-close" id="btnTutupMonDetail" aria-label="Tutup"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
+    <div id="monDetailBody"></div>
+  </div>
+</div>
+
+<div class="detail-sheet-overlay is-hidden" id="pkDetailOverlay">
+  <div class="detail-sheet" id="pkDetailSheet">
+    <div class="detail-sheet-handle"></div>
+    <button type="button" class="detail-sheet-close" id="btnTutupPkDetail" aria-label="Tutup"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
+    <div id="pkDetailBody"></div>
+  </div>
+</div>
+
+<div class="modal-overlay is-hidden" id="pkTolakOverlay">
+  <div class="modal-card" style="text-align:left;max-width:400px;">
+    <h2 style="text-align:center;">Tolak Pengajuan</h2>
+    <p style="text-align:center;">Berikan catatan alasan penolakan.</p>
+    <textarea id="pkCatatanTolak" class="absensi-textarea" placeholder="Catatan Pengelola (wajib diisi)" maxlength="300" style="margin-bottom:14px;"></textarea>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn-outline" id="btnBatalTolakPk" style="flex:1;">Batal</button>
+      <button type="button" class="btn-submit" id="btnKonfirmasiTolakPk" style="flex:1;margin-top:0;">Tolak</button>
+    </div>
+  </div>
+</div>
+
 <div class="loading-overlay is-hidden" id="loadingOverlay">
   <div class="spinner"></div>
   <p id="loadingText">Memuat data...</p>
@@ -1259,6 +1363,7 @@
 <script src="app-shell.js?v=20260903c"></script>
 <script src="auth-admin.js?v=20260918a"></script>
 <script src="admin.js?v=20260903c"></script>
+<script src="admin-sipres-monitoring.js?v=20260922a"></script>
 <!-- FASE 2: admin-stok.js, admin-shift.js, admin-role.js, admin-export.js,
      admin-import.js, admin-pengelola-sppg.js, admin-pengaturan.js, dan
      admin-website-publik.js SEKARANG dimuat lazy oleh admin.js sendiri

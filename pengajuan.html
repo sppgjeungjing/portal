@@ -4,17 +4,17 @@
 <script src="terapkan-preferensi.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Izin, Sakit &amp; Cuti — SPPG Jeungjing</title>
-<meta name="description" content="Pengajuan Izin, Sakit, dan Cuti Relawan SPPG Jeungjing">
+<title>Pengajuan Ketidakhadiran — SPPG Jeungjing</title>
+<meta name="description" content="Pengajuan Ketidakhadiran Relawan SPPG Jeungjing">
 <link rel="icon" href="assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260903b">
+<link rel="stylesheet" href="style.css?v=20260922a">
 <link rel="stylesheet" href="preferensi-tampilan.css">
-<link rel="stylesheet" href="portal.css?v=20260903b">
-<link rel="stylesheet" href="app-shell.css?v=20260903b">
-<link rel="stylesheet" href="rebrand.css?v=20260903b">
+<link rel="stylesheet" href="portal.css?v=20260922a">
+<link rel="stylesheet" href="app-shell.css?v=20260922a">
+<link rel="stylesheet" href="rebrand.css?v=20260922a">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#12294d">
 </head>
@@ -46,7 +46,7 @@
     <p class="shell-nav-group-title">SIPRES</p>
     <a href="absensi.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9z"/><path d="M9 12l2 2 4-4"/></svg></span><span>Presensi Kehadiran</span></a>
     <a href="riwayat.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><span>Riwayat Presensi</span></a>
-    <a href="pengajuan.html" class="shell-nav-link active"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M12 9v6"/><circle cx="12" cy="12" r="9"/></svg></span><span>Pengajuan Izin, Sakit &amp; Cuti</span></a>
+    <a href="pengajuan.html" class="shell-nav-link active"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M12 9v6"/><circle cx="12" cy="12" r="9"/></svg></span><span>Pengajuan Ketidakhadiran</span></a>
 
     <p class="shell-nav-group-title">SIPANDU</p>
     <a href="sipandu.html" class="shell-nav-link"><span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h4"/></svg></span><span>Produksi &amp; Data Operasional</span></a>
@@ -94,33 +94,69 @@
     </div>
   </header>
       <main class="shell-content">
-      <div class="shell-page-head">
-        <div class="shell-page-head-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M12 9v6"/><circle cx="12" cy="12" r="9"/></svg></div>
-        <div>
-          <h1>Izin, Sakit &amp; Cuti</h1>
-          <p>Ajukan ketidakhadiran Anda — terpisah dari Presensi.</p>
-        </div>
-      </div>
+  <div class="shell-page-head">
+    <div class="shell-page-head-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M12 9v6"/><circle cx="12" cy="12" r="9"/></svg></div>
+    <div>
+      <h1>Pengajuan Ketidakhadiran</h1>
+      <p>Ajukan Izin, Sakit, atau Cuti — terpisah dari Riwayat Presensi.</p>
+    </div>
+  </div>
 
-      <div class="auth-card absensi-card" id="panelPilihJenis">
-        <p class="absensi-section-title" style="margin-top:0;">Pilih Jenis Pengajuan</p>
-        <div class="absensi-camera-actions" style="margin-bottom:12px;flex-wrap:wrap;">
-          <button type="button" class="absensi-pill-choice" id="btnPilihIzin" data-jenis="Izin">Izin</button>
-          <button type="button" class="absensi-pill-choice" id="btnPilihSakit" data-jenis="Sakit">Sakit</button>
-          <button type="button" class="absensi-pill-choice" id="btnPilihCuti" data-jenis="Cuti">Cuti</button>
-        </div>
-        <textarea id="inputKeteranganPengajuan" class="absensi-textarea" placeholder="Jelaskan alasan Anda (wajib diisi)" maxlength="200"></textarea>
-        <button type="button" class="btn-submit" id="btnKirimPengajuan" disabled style="margin-top:14px;">Kirim Pengajuan</button>
-      </div>
+  <div class="auth-card absensi-card" id="panelFormPengajuan">
+    <p class="absensi-section-title" style="margin-top:0;">Jenis Ketidakhadiran</p>
+    <div class="absensi-camera-actions" style="margin-bottom:14px;flex-wrap:wrap;">
+      <button type="button" class="absensi-pill-choice" id="btnPilihIzin" data-jenis="IZIN">Izin</button>
+      <button type="button" class="absensi-pill-choice" id="btnPilihSakit" data-jenis="SAKIT">Sakit</button>
+      <button type="button" class="absensi-pill-choice" id="btnPilihCuti" data-jenis="CUTI">Cuti</button>
+    </div>
 
-      <div class="absensi-success-overlay is-hidden" id="overlaySuksesPengajuan">
-        <div class="absensi-success-card">
-          <div class="absensi-success-icon">✓</div>
-          <h2>Pengajuan Terkirim</h2>
-          <p id="suksesPengajuanTeks">Pengajuan Anda telah tercatat.</p>
-          <button type="button" class="btn-submit" id="btnTutupSuksesPengajuan">Selesai</button>
-        </div>
-      </div>
+    <div class="form-field-row">
+      <label class="form-field">
+        <span class="form-field-label">Tanggal Mulai</span>
+        <input type="date" id="inputTanggalMulai" class="form-field-input">
+      </label>
+      <label class="form-field">
+        <span class="form-field-label">Tanggal Selesai</span>
+        <input type="date" id="inputTanggalSelesai" class="form-field-input">
+      </label>
+    </div>
+
+    <label class="form-field" style="margin-top:12px;">
+      <span class="form-field-label">Alasan</span>
+      <textarea id="inputAlasanPengajuan" class="absensi-textarea" placeholder="Jelaskan alasan Anda (wajib diisi)" maxlength="300"></textarea>
+    </label>
+
+    <label class="form-field" style="margin-top:12px;">
+      <span class="form-field-label">Dokumen Pendukung <span class="form-field-optional">(opsional)</span></span>
+      <input type="file" id="inputDokumenPengajuan" accept="image/*,application/pdf" class="form-field-file">
+      <span class="form-field-hint" id="labelFileDokumen">Belum ada file dipilih</span>
+    </label>
+
+    <button type="button" class="btn-submit" id="btnKirimPengajuan" disabled style="margin-top:16px;">Ajukan</button>
+  </div>
+
+  <p class="riwayat-section-title" style="margin-top:24px;">Pengajuan Terakhir</p>
+  <div id="riwayatPengajuanList" class="riwayat-list"></div>
+  <div id="riwayatPengajuanKosong" class="empty-state" style="display:none;">Belum ada pengajuan ketidakhadiran.</div>
+
+  <div class="absensi-success-overlay is-hidden" id="overlaySuksesPengajuan">
+    <div class="absensi-success-card">
+      <div class="absensi-success-icon">✓</div>
+      <h2>Pengajuan Terkirim</h2>
+      <p id="suksesPengajuanTeks">Pengajuan Anda telah tercatat dan menunggu diproses Pengelola.</p>
+      <button type="button" class="btn-submit" id="btnTutupSuksesPengajuan">Selesai</button>
+    </div>
+  </div>
+
+  <div class="detail-sheet-overlay is-hidden" id="detailPengajuanOverlay">
+    <div class="detail-sheet" id="detailPengajuanSheet">
+      <div class="detail-sheet-handle"></div>
+      <button type="button" class="detail-sheet-close" id="btnTutupDetailPengajuan" aria-label="Tutup">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+      </button>
+      <div id="detailPengajuanBody"></div>
+    </div>
+  </div>
 
         <div class="toast is-hidden" id="errorToast" role="alert"></div>
         <div class="loading-overlay is-hidden" id="loadingOverlay">
@@ -137,10 +173,10 @@
   </div>
 </div>
 
-<script src="config.js?v=20260903b"></script>
-<script src="common.js?v=20260903b"></script>
-<script src="auth-relawan.js?v=20260903b"></script>
-<script src="app-shell.js?v=20260903b"></script>
-<script src="pengajuan.js"></script>
+<script src="config.js?v=20260922a"></script>
+<script src="common.js?v=20260922a"></script>
+<script src="auth-relawan.js?v=20260922a"></script>
+<script src="app-shell.js?v=20260922a"></script>
+<script src="pengajuan.js?v=20260922a"></script>
 </body>
 </html>

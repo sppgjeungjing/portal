@@ -317,6 +317,106 @@
 .riwayat-badge.izin { background: var(--color-info-bg); color: var(--color-info); }
 .riwayat-badge.sakit { background: var(--color-danger-bg); color: var(--color-danger); }
 .riwayat-badge.tidak-hadir { background: var(--color-muted-bg); color: var(--color-muted-text); }
+.riwayat-badge.cuti { background: var(--color-info-bg); color: var(--color-info); }
+.riwayat-badge.belum-absen { background: var(--color-muted-bg); color: var(--color-muted-text); }
+
+/* ---- Riwayat Presensi roster-first: kartu periode, grid statistik, item sbg tombol, detail sheet ---- */
+.periode-card {
+  background: linear-gradient(135deg, var(--color-navy), var(--color-navy-deep));
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-card);
+}
+.periode-card-label { font-size: 11px; letter-spacing: .06em; color: rgba(255,255,255,.6); margin-bottom: 6px; }
+.periode-card-range { font-size: 17px; font-weight: 800; margin-bottom: 14px; }
+.periode-card-jadwal { display: flex; align-items: baseline; gap: 8px; }
+.periode-card-jadwal-num { font-size: 30px; font-weight: 800; color: var(--color-gold); line-height: 1; }
+.periode-card-jadwal-label { font-size: 13px; color: rgba(255,255,255,.75); }
+
+.stat-grid-2x3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.stat-tile {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 12px;
+  text-align: center;
+}
+.stat-tile-num { display: block; font-size: 26px; font-weight: 800; color: var(--color-navy); line-height: 1.1; }
+.stat-tile-label { display: block; font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }
+.stat-tile.is-hadir .stat-tile-num { color: var(--color-success); }
+.stat-tile.is-terlambat .stat-tile-num { color: var(--color-warning); }
+.stat-tile.is-izin .stat-tile-num { color: var(--color-info); }
+.stat-tile.is-sakit .stat-tile-num { color: var(--color-danger); }
+.stat-tile.is-cuti .stat-tile-num { color: var(--color-info); }
+.stat-tile.is-tidak-hadir .stat-tile-num { color: var(--color-muted-text); }
+
+.riwayat-section-title { font-size: 13px; font-weight: 700; color: var(--color-navy); margin: 4px 0 10px; }
+
+/* riwayat-item sekarang <button> -- reset dulu, tampilan tetap sama seperti sebelumnya */
+button.riwayat-item {
+  width: 100%; text-align: left; font-family: inherit; cursor: pointer;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+}
+.riwayat-item-shift { font-size: 13px; color: var(--color-navy); }
+
+.detail-sheet-overlay {
+  position: fixed; inset: 0; background: rgba(8,20,36,.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 110;
+}
+.detail-sheet-overlay.is-hidden { display: none; }
+.detail-sheet {
+  background: var(--color-surface);
+  border-radius: 22px 22px 0 0;
+  width: 100%; max-width: 480px;
+  max-height: 85vh; overflow-y: auto;
+  padding: 10px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  box-shadow: var(--shadow-modal);
+  position: relative;
+  animation: modal-in .22s cubic-bezier(.2,.9,.3,1);
+}
+.detail-sheet-handle { width: 40px; height: 4px; background: var(--color-border); border-radius: var(--radius-pill); margin: 6px auto 14px; }
+.detail-sheet-close {
+  position: absolute; top: 14px; right: 16px;
+  width: 30px; height: 30px; border-radius: 50%;
+  border: none; background: var(--color-muted-bg); color: var(--color-text-muted);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.detail-sheet-head { margin-bottom: 12px; }
+.detail-sheet-head h2 { font-size: 16px; margin: 6px 0 0; color: var(--color-navy); }
+.detail-section-title { font-size: 12px; font-weight: 700; color: var(--color-text-muted); margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+.detail-section { border-top: 1px solid var(--color-border); }
+.detail-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--color-border); font-size: 13.5px; }
+.detail-row-label { color: var(--color-text-muted); }
+.detail-row-value { color: var(--color-text); font-weight: 600; text-align: right; }
+.detail-foto-link { display: inline-block; margin: 8px 0 4px; font-size: 13px; color: var(--color-sky-deep); font-weight: 700; text-decoration: none; }
+
+/* ---- Form field (Pengajuan Ketidakhadiran) ---- */
+.form-field { display: block; }
+.form-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-field-label { display: block; font-size: 12.5px; font-weight: 700; color: var(--color-navy); margin-bottom: 6px; }
+.form-field-optional { font-weight: 400; color: var(--color-text-muted); }
+.form-field-input {
+  width: 100%; box-sizing: border-box;
+  padding: 11px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border); background: var(--color-surface);
+  font-family: inherit; font-size: 14px; color: var(--color-text);
+}
+.form-field-input:focus { outline: none; border-color: var(--color-sky); }
+.form-field-file { display: block; font-size: 13px; margin-top: 2px; }
+.form-field-hint { display: block; font-size: 11.5px; color: var(--color-text-muted); margin-top: 4px; }
+@media (max-width: 420px) { .form-field-row { grid-template-columns: 1fr; } }
+
+/* ---- Card pengajuan (riwayat pengajuan relawan) ---- */
+.pengajuan-item-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pengajuan-item-jenis { font-size: 13px; color: var(--color-navy); font-weight: 700; }
 
 /* ============================================================
    BANTUAN
