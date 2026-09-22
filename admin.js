@@ -662,7 +662,7 @@
   el.filterStatusHarian.addEventListener('change', () => cache.rekapHarian.length && renderRekapHarianTable());
 
   function statusBadge(status) {
-    const map = { HADIR: 'hadir', TERLAMBAT: 'terlambat', IZIN: 'izin', SAKIT: 'sakit', 'BELUM ABSEN': 'belum-absen' };
+    const map = { HADIR: 'hadir', TERLAMBAT: 'terlambat', IZIN: 'izin', SAKIT: 'sakit', CUTI: 'izin', 'BELUM ABSEN': 'belum-absen' };
     return `<span class="badge ${map[status] || 'belum-absen'}">${escapeHtml(status)}</span>`;
   }
 
