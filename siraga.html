@@ -111,8 +111,6 @@
     <button type="button" class="stok-subtab" data-tab="kartustok">Kartu Stok</button>
     <button type="button" class="stok-subtab" data-tab="batch">Batch &amp; Kedaluwarsa</button>
     <button type="button" class="stok-subtab" data-tab="laporan">Laporan</button>
-    <button type="button" class="stok-subtab" data-tab="masterdata" id="tabMasterData" style="display:none;">Master Data</button>
-    <button type="button" class="stok-subtab" data-tab="pengaturan" id="tabPengaturan" style="display:none;">Pengaturan</button>
   </div>
 
   <!-- ============================================================ DASHBOARD ============================================================ -->
@@ -313,71 +311,6 @@
   </div>
 
   <!-- ============================================================ MASTER DATA (Admin) ============================================================ -->
-  <div class="stok-sub" id="siragaSubMasterData" style="display:none;">
-    <div class="stok-tabbar" style="margin-bottom:14px;">
-      <button type="button" class="stok-subtab active" data-msub="kategori">Kategori</button>
-      <button type="button" class="stok-subtab" data-msub="supplier">Supplier</button>
-      <button type="button" class="stok-subtab" data-msub="tambahbarang">+ Tambah Barang</button>
-    </div>
-
-    <div id="msubKategori">
-      <div style="display:flex;gap:8px;margin-bottom:12px;">
-        <input type="text" id="kategoriBaruNama" class="form-field-input" placeholder="Nama kategori baru">
-        <button class="btn-mini primary" id="btnTambahKategori">+ Tambah</button>
-      </div>
-      <div id="kategoriList" class="riwayat-list"></div>
-    </div>
-
-    <div id="msubSupplier" style="display:none;">
-      <div class="auth-card absensi-card" style="margin-bottom:14px;">
-        <input type="text" id="supplierBaruNama" class="form-field-input" placeholder="Nama supplier" style="margin-bottom:8px;">
-        <input type="text" id="supplierBaruKontak" class="form-field-input" placeholder="Kontak (opsional)" style="margin-bottom:8px;">
-        <input type="text" id="supplierBaruAlamat" class="form-field-input" placeholder="Alamat (opsional)" style="margin-bottom:8px;">
-        <button class="btn-submit" id="btnTambahSupplier">+ Tambah Supplier</button>
-      </div>
-      <div id="supplierList" class="riwayat-list"></div>
-    </div>
-
-    <div id="msubTambahBarang" style="display:none;">
-      <label class="form-field" style="margin-bottom:10px;">
-        <span class="form-field-label">Nama Barang</span>
-        <input type="text" id="barangBaruNama" class="form-field-input">
-      </label>
-      <label class="form-field" style="margin-bottom:10px;">
-        <span class="form-field-label">Kategori</span>
-        <select id="barangBaruKategori" class="form-field-input"><option value="">— Pilih Kategori —</option></select>
-      </label>
-      <label class="form-field" style="margin-bottom:10px;">
-        <span class="form-field-label">Satuan</span>
-        <select id="barangBaruSatuan" class="form-field-input"><option value="">— Pilih Satuan —</option></select>
-      </label>
-      <label class="form-field" style="margin-bottom:10px;">
-        <span class="form-field-label">Stok Minimum</span>
-        <input type="number" id="barangBaruStokMinimum" class="form-field-input" min="0" step="any" value="0">
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:14px;">
-        <input type="checkbox" id="barangBaruKelolaBatch"> Kelola Batch
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:14px;">
-        <input type="checkbox" id="barangBaruKelolaExpired"> Kelola Tanggal Kedaluwarsa
-      </label>
-      <button type="button" class="btn-submit" id="btnSimpanBarangBaru">Simpan Barang</button>
-    </div>
-  </div>
-
-  <!-- ============================================================ PENGATURAN (Admin) ============================================================ -->
-  <div class="stok-sub" id="siragaSubPengaturan" style="display:none;">
-    <div class="stok-tabbar" style="margin-bottom:14px;">
-      <button type="button" class="stok-subtab active" data-psub="hakakses">Hak Akses</button>
-      <button type="button" class="stok-subtab" data-psub="log">Log Aktivitas</button>
-    </div>
-    <div id="psubHakAkses">
-      <div id="hakAksesList" class="riwayat-list"></div>
-    </div>
-    <div id="psubLog" style="display:none;">
-      <div id="logAktivitasList" class="riwayat-list"></div>
-    </div>
-  </div>
 
         <div class="toast is-hidden" id="errorToast" role="alert"></div>
         <div class="loading-overlay is-hidden" id="loadingOverlay">

@@ -1,540 +1,667 @@
+// SPPG JEUNGJING — ADMIN: SIRAGA v2 (panelStok)
+// Lazy-loaded oleh admin.js saat tab "Stok & Persediaan" pertama kali
+// dibuka (lihat admin.js: panelStok: 'admin-stok.js'). Backend sama
+// persis dengan siraga.js (relawan) -- SiragaDb.gs dkk, spreadsheet
+// terpisah. Halaman ini FULL (Master Data + Hak Akses + Log Aktivitas
+// ADA di sini) -- sesuai keputusan: pengaturan SIRAGA hanya di Pengelola.
+
+let sesiAdminStok = null;
+let sudahInitAdminStok = false;
+
+function formatRupiahSederhanaAdmin(n) { return Number(n || 0).toLocaleString('id-ID'); }
+function tanggalHariIniIsoAdmin() { return new Date().toISOString().slice(0, 10); }
+function isoKeDmyTampilanAdmin(iso) { const [y, m, d] = iso.split('-'); return d + '/' + m + '/' + y; }
+
+function badgeClassStatusStokAdmin(status) {
+  const peta = { 'AMAN': 'hadir', 'MENDEKATI MINIMUM': 'terlambat', 'DI BAWAH MINIMUM': 'sakit', 'HABIS': 'sakit' };
+  return peta[status] || 'belum-absen';
+}
+function badgeClassStatusExpiredAdmin(status) {
+  const peta = { 'AMAN': 'hadir', 'AKAN KEDALUWARSA': 'terlambat', 'KEDALUWARSA': 'sakit' };
+  return peta[status] || 'belum-absen';
+}
+function badgeClassStatusTransaksiAdmin(status) {
+  const peta = { 'DRAFT': 'terlambat', 'SELESAI': 'hadir', 'DIBATALKAN': 'tidak-hadir' };
+  return peta[status] || 'belum-absen';
+}
+
 // ============================================================
-// SPPG JEUNGJING — MODUL STOK & PERSEDIAAN (Dashboard Admin)
-// File BARU, terpisah dari admin.js supaya tidak mengubah logic
-// yang sudah ada. Memakai window.sppgAdminToken (lihat hook kecil
-// di admin.js) dan fungsi bersama dari common.js (apiGet/apiPost).
+// SEARCHABLE DROPDOWN (sama seperti siraga.js relawan)
 // ============================================================
+function buatSearchableDropdownAdmin(containerId, opts) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = `
+    <input type="text" class="searchable-dropdown-input" placeholder="${opts.placeholder || 'Cari...'}" autocomplete="off">
+    <div class="searchable-dropdown-panel is-hidden"></div>
+    <div class="searchable-dropdown-selected is-hidden"></div>
+  `;
+  const input = container.querySelector('.searchable-dropdown-input');
+  const panel = container.querySelector('.searchable-dropdown-panel');
+  const selectedBox = container.querySelector('.searchable-dropdown-selected');
+  let selectedItem = null;
+  let daftarCache = null;
 
-(function () {
-  'use strict';
-
-  const el = {
-    tabBtn: document.querySelector('.admin-tab-btn[data-panel="panelStok"]'),
-    subtabs: document.querySelectorAll('.stok-subtab'),
-    subs: document.querySelectorAll('.stok-sub'),
-
-    stokTotalJenis: document.getElementById('stokTotalJenis'),
-    stokAman: document.getElementById('stokAman'),
-    stokMenipis: document.getElementById('stokMenipis'),
-    stokHabis: document.getElementById('stokHabis'),
-    stokPerluPerhatian: document.getElementById('stokPerluPerhatian'),
-
-    stokCariBarang: document.getElementById('stokCariBarang'),
-    stokFilterKategori: document.getElementById('stokFilterKategori'),
-    stokFilterStatus: document.getElementById('stokFilterStatus'),
-    btnCariBarang: document.getElementById('btnCariBarang'),
-    btnBukaTambahBarang: document.getElementById('btnBukaTambahBarang'),
-    tbodyStokBarang: document.getElementById('tbodyStokBarang'),
-
-    masukSumber: document.getElementById('masukSumber'),
-    masukDaftarItem: document.getElementById('masukDaftarItem'),
-    btnTambahBarisMasuk: document.getElementById('btnTambahBarisMasuk'),
-    masukKeterangan: document.getElementById('masukKeterangan'),
-    btnSimpanMasuk: document.getElementById('btnSimpanMasuk'),
-
-    keluarTujuan: document.getElementById('keluarTujuan'),
-    keluarDaftarItem: document.getElementById('keluarDaftarItem'),
-    btnTambahBarisKeluar: document.getElementById('btnTambahBarisKeluar'),
-    keluarKeterangan: document.getElementById('keluarKeterangan'),
-    btnSimpanKeluar: document.getElementById('btnSimpanKeluar'),
-
-    riwayatFilterJenis: document.getElementById('riwayatFilterJenis'),
-    btnMuatRiwayat: document.getElementById('btnMuatRiwayat'),
-    tbodyStokRiwayat: document.getElementById('tbodyStokRiwayat'),
-
-    formTambahKategori: document.getElementById('formTambahKategori'),
-    inputKategoriBaru: document.getElementById('inputKategoriBaru'),
-    inputKategoriKeterangan: document.getElementById('inputKategoriKeterangan'),
-    tbodyStokKategori: document.getElementById('tbodyStokKategori'),
-
-    formTambahSatuan: document.getElementById('formTambahSatuan'),
-    inputSatuanBaru: document.getElementById('inputSatuanBaru'),
-    tbodyStokSatuan: document.getElementById('tbodyStokSatuan'),
-
-    selectRelawanAkses: document.getElementById('selectRelawanAkses'),
-    btnTambahPetugas: document.getElementById('btnTambahPetugas'),
-    tbodyPetugasStok: document.getElementById('tbodyPetugasStok'),
-
-    modalBarang: document.getElementById('modalBarang'),
-    modalBarangJudul: document.getElementById('modalBarangJudul'),
-    formModalBarang: document.getElementById('formModalBarang'),
-    modalBarangId: document.getElementById('modalBarangId'),
-    modalBarangNama: document.getElementById('modalBarangNama'),
-    modalBarangKategori: document.getElementById('modalBarangKategori'),
-    modalBarangSubkategori: document.getElementById('modalBarangSubkategori'),
-    modalBarangSatuan: document.getElementById('modalBarangSatuan'),
-    modalBarangMinimum: document.getElementById('modalBarangMinimum'),
-    modalBarangStokAwal: document.getElementById('modalBarangStokAwal'),
-    modalBarangKeterangan: document.getElementById('modalBarangKeterangan'),
-    btnBatalModalBarang: document.getElementById('btnBatalModalBarang'),
-
-    modalDetailBarang: document.getElementById('modalDetailBarang'),
-    detailBarangNama: document.getElementById('detailBarangNama'),
-    detailBarangSub: document.getElementById('detailBarangSub'),
-    detailBarangStok: document.getElementById('detailBarangStok'),
-    detailBarangMinimum: document.getElementById('detailBarangMinimum'),
-    detailBarangTotalMasuk: document.getElementById('detailBarangTotalMasuk'),
-    detailBarangTotalKeluar: document.getElementById('detailBarangTotalKeluar'),
-    detailBarangRiwayat: document.getElementById('detailBarangRiwayat'),
-    btnTutupDetailBarang: document.getElementById('btnTutupDetailBarang')
-  };
-
-  if (!el.tabBtn) return; // panel Stok tidak ada di halaman ini -- aman keluar
-
-  const cache = { kategori: [], satuan: [], barang: [], relawanSemua: [] };
-  let sudahInit = false;
-
-  function token() { return window.sppgAdminToken; }
-
-  // --------------------------------------------------------
-  // SUB-TAB
-  // --------------------------------------------------------
-  el.subtabs.forEach(btn => {
-    btn.addEventListener('click', () => {
-      el.subtabs.forEach(b => b.classList.remove('active'));
-      el.subs.forEach(s => { s.style.display = 'none'; });
-      btn.classList.add('active');
-      const target = document.getElementById('stokSub' + kapital_(btn.dataset.sub));
-      if (target) target.style.display = 'block';
-
-      if (btn.dataset.sub === 'ringkasan') muatDashboard();
-      else if (btn.dataset.sub === 'barang') muatDataBarang();
-      else if (btn.dataset.sub === 'kategori') { muatKategoriAdmin(); muatSatuanAdmin(); }
-      else if (btn.dataset.sub === 'akses') muatHakAkses();
-      // 'masuk' & 'keluar': cukup pastikan minimal 1 baris item ada
-      else if (btn.dataset.sub === 'masuk' && !el.masukDaftarItem.children.length) tambahBarisItem_(el.masukDaftarItem);
-      else if (btn.dataset.sub === 'keluar' && !el.keluarDaftarItem.children.length) tambahBarisItem_(el.keluarDaftarItem);
-    });
-  });
-  // set default tab aktif secara visual (sub HTML "ringkasan" sudah display:block bawaan)
-  el.subtabs[0].classList.add('active');
-
-  function kapital_(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-
-  // --------------------------------------------------------
-  // INIT — dipanggil sekali begitu admin berhasil login
-  // --------------------------------------------------------
-  window.addEventListener('sppg-admin-ready', () => { if (!sudahInit) { sudahInit = true; initStok(); } });
-  // Jaga-jaga kalau event sudah lewat sebelum listener terpasang (race kecil)
-  if (window.sppgAdminToken && !sudahInit) { sudahInit = true; initStok(); }
-
-  async function initStok() {
-    try {
-      await Promise.all([muatKategoriUntukDropdown(), muatSatuanUntukDropdown()]);
-      await muatDashboard();
-    } catch (err) {
-      // Diam-diam saja di init awal -- pesan error akan tetap muncul saat user benar-benar buka tab Stok.
-    }
-    // Staff: lihat-lihat saja di modul Stok, tidak bisa mencatat transaksi
-    // (ditegakkan juga di backend -- ini cuma supaya tombolnya tidak jadi
-    // jalan buntu kalau diklik).
-    if (window.sppgAdminRole === 'STAFF') {
-      [el.btnSimpanMasuk, el.btnSimpanKeluar].forEach(btn => {
-        if (!btn) return;
-        btn.disabled = true;
-        btn.textContent = 'Khusus Admin/Petugas Stok';
-        btn.title = 'Akun Staff hanya bisa melihat data Stok, tidak bisa mencatat transaksi.';
-      });
-    }
-  }
-
-  // --------------------------------------------------------
-  // DASHBOARD
-  // --------------------------------------------------------
-  async function muatDashboard() {
-    try {
-      const d = await apiGet('getStokDashboard', { token: token() });
-      el.stokTotalJenis.textContent = d.totalJenisBarang;
-      el.stokAman.textContent = d.stokAman;
-      el.stokMenipis.textContent = d.stokMenipis;
-      el.stokHabis.textContent = d.stokHabis;
-
-      if (!d.perluPerhatian.length) {
-        el.stokPerluPerhatian.innerHTML = '<div class="empty-state">Semua stok dalam kondisi aman. 🎉</div>';
-        return;
-      }
-      el.stokPerluPerhatian.innerHTML = d.perluPerhatian.map(b => `
-        <div class="stok-perhatian-row">
-          <div><p>${escapeHtml(b.nama)}</p><small>Stok: ${b.stok} ${escapeHtml(b.satuan)} · Minimum: ${b.minimum} ${escapeHtml(b.satuan)}</small></div>
-          <span class="stok-badge stok-badge-${b.status.toLowerCase()}">${b.status === 'HABIS' ? '🔴 Habis' : '🟡 Menipis'}</span>
-        </div>`).join('');
-    } catch (err) {
-      showError(err.message);
-    }
-  }
-
-  // --------------------------------------------------------
-  // KATEGORI + SATUAN (dropdown ringan, dipakai form Tambah/Edit Barang & filter)
-  // --------------------------------------------------------
-  async function muatKategoriUntukDropdown() {
-    cache.kategori = await apiGet('getKategoriBarang', { token: token() });
-    const opsi = cache.kategori.map(k => `<option value="${escapeHtml(k.id)}">${escapeHtml(k.nama)}</option>`).join('');
-    el.stokFilterKategori.innerHTML = '<option value="">Semua Kategori</option>' + opsi;
-    el.modalBarangKategori.innerHTML = '<option value="">Pilih Kategori</option>' + opsi;
-  }
-
-  async function muatSatuanUntukDropdown() {
-    cache.satuan = await apiGet('getSatuanList', { token: token() });
-    el.modalBarangSatuan.innerHTML = '<option value="">Pilih Satuan</option>' +
-      cache.satuan.map(s => `<option value="${escapeHtml(s.nama)}">${escapeHtml(s.nama)}</option>`).join('');
-  }
-
-  // --------------------------------------------------------
-  // KATEGORI (kelola, Admin)
-  // --------------------------------------------------------
-  async function muatKategoriAdmin() {
-    el.tbodyStokKategori.innerHTML = '<tr><td colspan="4"><div class="empty-state">Memuat data...</div></td></tr>';
-    try {
-      const list = await apiGet('getKategoriBarangAdmin', { token: token() });
-      if (!list.length) { el.tbodyStokKategori.innerHTML = '<tr><td colspan="4"><div class="empty-state">Belum ada kategori.</div></td></tr>'; return; }
-      el.tbodyStokKategori.innerHTML = list.map(k => `
-        <tr>
-          <td>${escapeHtml(k.nama)}</td>
-          <td>${escapeHtml(k.keterangan || '-')}</td>
-          <td>${k.aktif ? '<span class="stok-badge stok-badge-aman">Aktif</span>' : '<span class="stok-badge stok-badge-habis">Nonaktif</span>'}</td>
-          <td><button type="button" class="btn-mini" data-toggle-kategori="${escapeHtml(k.id)}" data-aktif="${k.aktif ? '0' : '1'}">${k.aktif ? 'Nonaktifkan' : 'Aktifkan'}</button></td>
-        </tr>`).join('');
-      el.tbodyStokKategori.querySelectorAll('[data-toggle-kategori]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          try {
-            await apiPost('updateStatusKategoriAktif', { token: token(), id: btn.dataset.toggleKategori, aktif: btn.dataset.aktif === '1' });
-            showSuccess('Status kategori diperbarui.');
-            await Promise.all([muatKategoriAdmin(), muatKategoriUntukDropdown()]);
-          } catch (err) { showError(err.message); }
-        });
-      });
-    } catch (err) {
-      showError(err.message);
-    }
-  }
-
-  el.formTambahKategori.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await apiPost('addKategoriStok', { token: token(), nama: el.inputKategoriBaru.value.trim(), keterangan: el.inputKategoriKeterangan.value.trim() });
-      el.inputKategoriBaru.value = '';
-      el.inputKategoriKeterangan.value = '';
-      showSuccess('Kategori ditambahkan.');
-      await Promise.all([muatKategoriAdmin(), muatKategoriUntukDropdown()]);
-    } catch (err) {
-      showError(err.message);
-    }
-  });
-
-  // --------------------------------------------------------
-  // SATUAN (kelola, Admin) — master terkontrol
-  // --------------------------------------------------------
-  async function muatSatuanAdmin() {
-    el.tbodyStokSatuan.innerHTML = '<tr><td colspan="3"><div class="empty-state">Memuat data...</div></td></tr>';
-    try {
-      const list = await apiGet('getSatuanListAdmin', { token: token() });
-      if (!list.length) { el.tbodyStokSatuan.innerHTML = '<tr><td colspan="3"><div class="empty-state">Belum ada satuan.</div></td></tr>'; return; }
-      el.tbodyStokSatuan.innerHTML = list.map(s => `
-        <tr>
-          <td>${escapeHtml(s.nama)}</td>
-          <td>${s.aktif ? '<span class="stok-badge stok-badge-aman">Aktif</span>' : '<span class="stok-badge stok-badge-habis">Nonaktif</span>'}</td>
-          <td><button type="button" class="btn-mini" data-toggle-satuan="${escapeHtml(s.id)}" data-aktif="${s.aktif ? '0' : '1'}">${s.aktif ? 'Nonaktifkan' : 'Aktifkan'}</button></td>
-        </tr>`).join('');
-      el.tbodyStokSatuan.querySelectorAll('[data-toggle-satuan]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          try {
-            await apiPost('updateStatusSatuanAktif', { token: token(), id: btn.dataset.toggleSatuan, aktif: btn.dataset.aktif === '1' });
-            showSuccess('Status satuan diperbarui.');
-            await Promise.all([muatSatuanAdmin(), muatSatuanUntukDropdown()]);
-          } catch (err) { showError(err.message); }
-        });
-      });
-    } catch (err) {
-      showError(err.message);
-    }
-  }
-
-  el.formTambahSatuan.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await apiPost('addSatuan', { token: token(), nama: el.inputSatuanBaru.value.trim() });
-      el.inputSatuanBaru.value = '';
-      showSuccess('Satuan ditambahkan.');
-      await Promise.all([muatSatuanAdmin(), muatSatuanUntukDropdown()]);
-    } catch (err) {
-      showError(err.message);
-    }
-  });
-
-  // --------------------------------------------------------
-  // DATA BARANG
-  // --------------------------------------------------------
-  async function muatDataBarang() {
-    el.tbodyStokBarang.innerHTML = '<tr><td colspan="7"><div class="empty-state">Memuat data...</div></td></tr>';
-    try {
-      cache.barang = await apiGet('getDataBarangList', {
-        token: token(),
-        kategori: el.stokFilterKategori.value,
-        status: el.stokFilterStatus.value,
-        cari: el.stokCariBarang.value.trim()
-      });
-      if (!cache.barang.length) { el.tbodyStokBarang.innerHTML = '<tr><td colspan="7"><div class="empty-state">Belum ada barang. Tambahkan lewat tombol "+ Tambah Barang".</div></td></tr>'; return; }
-
-      el.tbodyStokBarang.innerHTML = cache.barang.map(b => `
-        <tr>
-          <td>${escapeHtml(b.kode)}</td>
-          <td>${escapeHtml(b.nama)}</td>
-          <td>${escapeHtml(b.namaKategori)}${b.subkategori ? ' <span style="color:var(--color-text-muted);font-size:11.5px;">· ' + escapeHtml(b.subkategori) + '</span>' : ''}</td>
-          <td>${b.stok} ${escapeHtml(b.satuan)}</td>
-          <td>${b.stokMinimum} ${escapeHtml(b.satuan)}</td>
-          <td><span class="stok-badge stok-badge-${b.status.toLowerCase()}">${b.status === 'AMAN' ? '🟢' : b.status === 'MENIPIS' ? '🟡' : '🔴'} ${b.status}</span></td>
-          <td style="display:flex;gap:6px;">
-            <button type="button" class="btn-mini" data-detail-barang="${escapeHtml(b.id)}">Detail</button>
-            <button type="button" class="btn-mini" data-edit-barang="${escapeHtml(b.id)}">Edit</button>
-          </td>
-        </tr>`).join('');
-
-      el.tbodyStokBarang.querySelectorAll('[data-detail-barang]').forEach(btn => {
-        btn.addEventListener('click', () => bukaDetailBarang(btn.dataset.detailBarang));
-      });
-      el.tbodyStokBarang.querySelectorAll('[data-edit-barang]').forEach(btn => {
-        btn.addEventListener('click', () => bukaModalBarang(cache.barang.find(x => x.id === btn.dataset.editBarang)));
-      });
-    } catch (err) {
-      showError(err.message);
-    }
-  }
-
-  el.btnCariBarang.addEventListener('click', muatDataBarang);
-  el.stokCariBarang.addEventListener('keydown', (e) => { if (e.key === 'Enter') muatDataBarang(); });
-
-  // --------------------------------------------------------
-  // MODAL TAMBAH / EDIT BARANG
-  // --------------------------------------------------------
-  function bukaModalBarang(barang) {
-    el.formModalBarang.reset();
-    if (barang) {
-      el.modalBarangJudul.textContent = 'Edit Barang';
-      el.modalBarangId.value = barang.id;
-      el.modalBarangNama.value = barang.nama;
-      el.modalBarangKategori.value = barang.idKategori;
-      el.modalBarangSubkategori.value = barang.subkategori || '';
-      el.modalBarangSatuan.value = barang.satuan;
-      el.modalBarangMinimum.value = barang.stokMinimum;
-      el.modalBarangStokAwal.style.display = 'none'; // stok tidak diedit langsung di sini -- hanya lewat transaksi
+  async function tampilkanPanel(query) {
+    if (!daftarCache) { try { daftarCache = await opts.fetchList(''); } catch (e) { panel.innerHTML = `<div class="searchable-dropdown-empty">Gagal memuat data.</div>`; panel.classList.remove('is-hidden'); return; } }
+    const q = (query || '').toLowerCase();
+    const hasil = daftarCache.filter(it => it.label.toLowerCase().indexOf(q) !== -1);
+    if (!hasil.length) {
+      panel.innerHTML = `<div class="searchable-dropdown-empty">Tidak ditemukan.</div>`;
     } else {
-      el.modalBarangJudul.textContent = 'Tambah Barang';
-      el.modalBarangId.value = '';
-      el.modalBarangStokAwal.style.display = 'block';
+      panel.innerHTML = hasil.slice(0, 50).map((it, i) => `<button type="button" class="searchable-dropdown-item" data-idx="${i}">${escapeHtml(it.label)}${it.sub ? '<small>' + escapeHtml(it.sub) + '</small>' : ''}</button>`).join('');
+      panel.querySelectorAll('.searchable-dropdown-item').forEach((el, i) => { el.addEventListener('click', () => pilihItem(hasil[i])); });
     }
-    el.modalBarang.classList.remove('is-hidden');
+    panel.classList.remove('is-hidden');
   }
-  el.btnBukaTambahBarang.addEventListener('click', () => bukaModalBarang(null));
-  el.btnBatalModalBarang.addEventListener('click', () => el.modalBarang.classList.add('is-hidden'));
-  el.modalBarang.addEventListener('click', (e) => { if (e.target === el.modalBarang) el.modalBarang.classList.add('is-hidden'); });
-
-  el.formModalBarang.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const isEdit = !!el.modalBarangId.value;
-    const payload = {
-      token: token(),
-      id: el.modalBarangId.value,
-      nama: el.modalBarangNama.value.trim(),
-      idKategori: el.modalBarangKategori.value,
-      subkategori: el.modalBarangSubkategori.value.trim(),
-      satuan: el.modalBarangSatuan.value,
-      stokMinimum: Number(el.modalBarangMinimum.value),
-      stokAwal: Number(el.modalBarangStokAwal.value || 0),
-      keterangan: el.modalBarangKeterangan.value.trim()
-    };
-    try {
-      await apiPost(isEdit ? 'updateBarang' : 'addBarang', payload);
-      showSuccess(isEdit ? 'Barang diperbarui.' : 'Barang baru ditambahkan.');
-      el.modalBarang.classList.add('is-hidden');
-      await muatDataBarang();
-    } catch (err) {
-      showError(err.message);
-    }
-  });
-
-  // --------------------------------------------------------
-  // MODAL DETAIL BARANG
-  // --------------------------------------------------------
-  async function bukaDetailBarang(idBarang) {
-    el.modalDetailBarang.classList.remove('is-hidden');
-    el.detailBarangRiwayat.innerHTML = '<div class="empty-state">Memuat data...</div>';
-    try {
-      const d = await apiGet('getDetailBarang', { token: token(), idBarang });
-      el.detailBarangNama.textContent = d.nama;
-      el.detailBarangSub.textContent = d.kode + ' · ' + d.namaKategori + (d.subkategori ? ' · ' + d.subkategori : '');
-      el.detailBarangStok.textContent = d.stok + ' ' + d.satuan;
-      el.detailBarangMinimum.textContent = d.stokMinimum + ' ' + d.satuan;
-      el.detailBarangTotalMasuk.textContent = d.totalMasuk + ' ' + d.satuan;
-      el.detailBarangTotalKeluar.textContent = d.totalKeluar + ' ' + d.satuan;
-
-      if (!d.riwayat.length) { el.detailBarangRiwayat.innerHTML = '<div class="empty-state">Belum ada pergerakan stok.</div>'; return; }
-      el.detailBarangRiwayat.innerHTML = d.riwayat.map(r => `
-        <div class="stok-perhatian-row">
-          <div><p>${r.jenis === 'MASUK' ? '📥' : '📤'} ${r.jumlah} ${escapeHtml(d.satuan)} · ${escapeHtml(r.nomorTransaksi)}</p>
-          <small>${escapeHtml(r.tanggal)} · Petugas: ${escapeHtml(r.petugas)} · Stok ${r.stokSebelum} → ${r.stokSesudah}</small></div>
-        </div>`).join('');
-    } catch (err) {
-      el.detailBarangRiwayat.innerHTML = '';
-      showError(err.message);
-    }
+  function pilihItem(item) {
+    selectedItem = item;
+    input.value = '';
+    panel.classList.add('is-hidden');
+    selectedBox.classList.remove('is-hidden');
+    selectedBox.innerHTML = `<span>${escapeHtml(item.label)}</span><button type="button" aria-label="Hapus pilihan">×</button>`;
+    selectedBox.querySelector('button').addEventListener('click', () => { selectedItem = null; selectedBox.classList.add('is-hidden'); input.style.display = ''; });
+    input.style.display = 'none';
+    if (opts.onSelect) opts.onSelect(item);
   }
-  el.btnTutupDetailBarang.addEventListener('click', () => el.modalDetailBarang.classList.add('is-hidden'));
-  el.modalDetailBarang.addEventListener('click', (e) => { if (e.target === el.modalDetailBarang) el.modalDetailBarang.classList.add('is-hidden'); });
+  input.addEventListener('input', () => tampilkanPanel(input.value));
+  input.addEventListener('focus', () => tampilkanPanel(input.value));
+  document.addEventListener('click', (e) => { if (!container.contains(e.target)) panel.classList.add('is-hidden'); });
 
-  // --------------------------------------------------------
-  // BARANG MASUK / KELUAR — baris item dinamis (multi-item)
-  // --------------------------------------------------------
-  function opsiBarang_(daftar) {
-    const sumber = daftar || cache.barang;
-    const opsi = sumber.map(b => `<option value="${escapeHtml(b.id)}">${escapeHtml(b.nama)} (stok: ${b.stok} ${escapeHtml(b.satuan)})</option>`).join('');
-    return '<option value="">Pilih barang...</option>' + opsi;
-  }
+  return {
+    getSelected: () => selectedItem,
+    reset: () => { selectedItem = null; selectedBox.classList.add('is-hidden'); input.style.display = ''; input.value = ''; },
+    invalidateCache: () => { daftarCache = null; }
+  };
+}
 
-  async function pastikanBarangTermuat_() {
-    if (!cache.barang.length) {
-      try { cache.barang = await apiGet('getDataBarangList', { token: token() }); } catch (err) { showError(err.message); }
-    }
-  }
+async function fetchBarangUntukDropdownAdmin() {
+  const list = await apiPost('getSiragaBarangList', { token: sesiAdminStok.token });
+  return list.map(b => ({ id: b.id, label: b.nama, sub: b.kode + ' · Stok: ' + formatRupiahSederhanaAdmin(b.stok) + ' ' + b.satuan, data: b }));
+}
 
-  function tambahBarisItem_(container) {
-    const baris = document.createElement('div');
-    baris.className = 'stok-item-row';
-    baris.innerHTML = `
-      <input type="text" class="stok-item-cari" placeholder="🔍 Cari ID/nama barang..." autocomplete="off">
-      <select class="stok-item-barang">${opsiBarang_()}</select>
-      <input type="number" class="stok-item-jumlah" placeholder="Jumlah" min="0.01" step="0.01">
-      <button type="button" title="Hapus baris">🗑</button>`;
-    baris.querySelector('button').addEventListener('click', () => baris.remove());
+// ============================================================
+// BARIS ITEM DINAMIS
+// ============================================================
+let counterBarisItemAdmin = 0;
+const registriBarisItemAdmin = {};
 
-    const inputCari = baris.querySelector('.stok-item-cari');
-    const select = baris.querySelector('.stok-item-barang');
-    inputCari.addEventListener('input', () => {
-      const kata = inputCari.value.trim().toLowerCase();
-      const nilaiTerpilihSebelumnya = select.value;
-      const hasil = !kata ? cache.barang : cache.barang.filter(b =>
-        String(b.id).toLowerCase().includes(kata) ||
-        String(b.nama).toLowerCase().includes(kata) ||
-        String(b.kode || '').toLowerCase().includes(kata)
-      );
-      select.innerHTML = opsiBarang_(hasil);
-      // Kalau barang yang sebelumnya dipilih masih ada di hasil filter, pertahankan pilihannya.
-      if (hasil.some(b => b.id === nilaiTerpilihSebelumnya)) select.value = nilaiTerpilihSebelumnya;
-    });
+function tambahBarisItemAdmin(containerId, jenis) {
+  const rowId = 'arow' + (++counterBarisItemAdmin);
+  const container = document.getElementById(containerId);
+  const div = document.createElement('div');
+  div.className = 'siraga-item-row';
+  div.id = rowId;
+  div.innerHTML = `
+    <button type="button" class="siraga-item-row-remove" aria-label="Hapus baris">×</button>
+    <label class="form-field" style="margin-bottom:8px;"><span class="form-field-label">Barang</span><div class="searchable-dropdown" id="${rowId}-barang"></div></label>
+    <div id="${rowId}-batchWrap" style="display:none;margin-bottom:8px;"><label class="form-field"><span class="form-field-label">Batch</span><select id="${rowId}-batch" class="form-field-input"></select></label></div>
+    <div id="${rowId}-expiredWrap" style="display:none;">
+      <div class="form-field-row" style="margin-bottom:8px;">
+        <label class="form-field"><span class="form-field-label">Tanggal Produksi</span><input type="date" id="${rowId}-produksi" class="form-field-input"></label>
+        <label class="form-field"><span class="form-field-label">Tanggal Expired</span><input type="date" id="${rowId}-expired" class="form-field-input"></label>
+      </div>
+    </div>
+    <label class="form-field"><span class="form-field-label">Qty</span><input type="number" id="${rowId}-qty" class="form-field-input" min="0.01" step="any"></label>
+    <p class="siraga-item-hint" id="${rowId}-hint"></p>
+  `;
+  container.appendChild(div);
+  div.querySelector('.siraga-item-row-remove').addEventListener('click', () => { div.remove(); delete registriBarisItemAdmin[rowId]; });
 
-    container.appendChild(baris);
-  }
-
-  el.btnTambahBarisMasuk.addEventListener('click', async () => { await pastikanBarangTermuat_(); tambahBarisItem_(el.masukDaftarItem); });
-  el.btnTambahBarisKeluar.addEventListener('click', async () => { await pastikanBarangTermuat_(); tambahBarisItem_(el.keluarDaftarItem); });
-
-  function ambilItemDariContainer_(container) {
-    return Array.from(container.querySelectorAll('.stok-item-row')).map(baris => ({
-      idBarang: baris.querySelector('.stok-item-barang').value,
-      jumlah: Number(baris.querySelector('.stok-item-jumlah').value)
-    })).filter(it => it.idBarang && it.jumlah > 0);
-  }
-
-  el.btnSimpanMasuk.addEventListener('click', async () => {
-    const items = ambilItemDariContainer_(el.masukDaftarItem);
-    if (!items.length) { showError('Isi minimal 1 barang dengan jumlah yang valid.'); return; }
-    try {
-      showLoading('Menyimpan transaksi barang masuk...');
-      const hasil = await apiPost('simpanBarangMasuk', { token: token(), sumberTujuan: el.masukSumber.value.trim(), keterangan: el.masukKeterangan.value.trim(), items });
-      hideLoading();
-      showSuccess('Barang masuk tersimpan (' + hasil.nomorTransaksi + ').');
-      el.masukDaftarItem.innerHTML = ''; el.masukSumber.value = ''; el.masukKeterangan.value = '';
-      tambahBarisItem_(el.masukDaftarItem);
-      cache.barang = []; // paksa muat ulang biar stok di dropdown ter-update
-      await muatDashboard();
-    } catch (err) {
-      hideLoading();
-      showError(err.message);
-    }
-  });
-
-  el.btnSimpanKeluar.addEventListener('click', async () => {
-    const items = ambilItemDariContainer_(el.keluarDaftarItem);
-    if (!items.length) { showError('Isi minimal 1 barang dengan jumlah yang valid.'); return; }
-    try {
-      showLoading('Menyimpan transaksi barang keluar...');
-      const hasil = await apiPost('simpanBarangKeluar', { token: token(), sumberTujuan: el.keluarTujuan.value.trim(), keterangan: el.keluarKeterangan.value.trim(), items });
-      hideLoading();
-      showSuccess('Barang keluar tersimpan (' + hasil.nomorTransaksi + ').');
-      el.keluarDaftarItem.innerHTML = ''; el.keluarTujuan.value = ''; el.keluarKeterangan.value = '';
-      tambahBarisItem_(el.keluarDaftarItem);
-      cache.barang = [];
-      await muatDashboard();
-    } catch (err) {
-      hideLoading();
-      // Pesan "Stok tidak mencukupi" dari backend akan tampil apa adanya di sini.
-      showError(err.message);
-    }
-  });
-
-  // --------------------------------------------------------
-  // RIWAYAT
-  // --------------------------------------------------------
-  el.btnMuatRiwayat.addEventListener('click', async () => {
-    el.tbodyStokRiwayat.innerHTML = '<tr><td colspan="7"><div class="empty-state">Memuat data...</div></td></tr>';
-    try {
-      const list = await apiGet('getRiwayatStokList', { token: token(), jenis: el.riwayatFilterJenis.value });
-      if (!list.length) { el.tbodyStokRiwayat.innerHTML = '<tr><td colspan="7"><div class="empty-state">Belum ada transaksi.</div></td></tr>'; return; }
-      el.tbodyStokRiwayat.innerHTML = list.map(r => `
-        <tr>
-          <td>${escapeHtml(r.tanggal)}</td>
-          <td>${escapeHtml(r.nomorTransaksi)}</td>
-          <td>${r.jenis === 'MASUK' ? '📥 Masuk' : '📤 Keluar'}</td>
-          <td>${escapeHtml(r.namaBarang)}</td>
-          <td>${r.jumlah} ${escapeHtml(r.satuan)}</td>
-          <td>${escapeHtml(r.petugas)}</td>
-          <td>${escapeHtml(r.keterangan || '-')}</td>
-        </tr>`).join('');
-    } catch (err) {
-      showError(err.message);
-    }
-  });
-
-  // --------------------------------------------------------
-  // HAK AKSES (Petugas Stok)
-  // --------------------------------------------------------
-  async function muatHakAkses() {
-    el.tbodyPetugasStok.innerHTML = '<tr><td colspan="3"><div class="empty-state">Memuat data...</div></td></tr>';
-    try {
-      if (!cache.relawanSemua.length) cache.relawanSemua = await apiGet('getRelawan', { semua: 1 });
-      el.selectRelawanAkses.innerHTML = '<option value="">Pilih relawan...</option>' +
-        cache.relawanSemua.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.nama)}</option>`).join('');
-
-      const list = await apiGet('getDaftarPetugasStok', { token: token() });
-      if (!list.length) { el.tbodyPetugasStok.innerHTML = '<tr><td colspan="3"><div class="empty-state">Belum ada Petugas Stok.</div></td></tr>'; return; }
-      el.tbodyPetugasStok.innerHTML = list.map(p => `
-        <tr>
-          <td>${escapeHtml(p.nama)}</td>
-          <td>${escapeHtml(p.username)}</td>
-          <td><button type="button" class="btn-mini" data-cabut-petugas="${escapeHtml(p.idRelawan)}">Cabut Akses</button></td>
-        </tr>`).join('');
-      el.tbodyPetugasStok.querySelectorAll('[data-cabut-petugas]').forEach(btn => {
-        btn.addEventListener('click', async () => {
+  const dropdown = buatSearchableDropdownAdmin(rowId + '-barang', {
+    placeholder: 'Cari barang...', fetchList: fetchBarangUntukDropdownAdmin,
+    onSelect: async (item) => {
+      const b = item.data;
+      const hint = document.getElementById(rowId + '-hint');
+      const batchWrap = document.getElementById(rowId + '-batchWrap');
+      const expiredWrap = document.getElementById(rowId + '-expiredWrap');
+      if (jenis === 'MASUK') {
+        expiredWrap.style.display = b.kelolaBatch || b.kelolaExpired ? 'block' : 'none';
+        batchWrap.style.display = 'none';
+        hint.textContent = 'Satuan: ' + b.satuan + (b.kelolaBatch || b.kelolaExpired ? ' · Barang ini akan membuat batch baru saat disimpan.' : '');
+        hint.className = 'siraga-item-hint';
+      } else {
+        expiredWrap.style.display = 'none';
+        if (b.kelolaBatch) {
+          batchWrap.style.display = 'block';
+          const selBatch = document.getElementById(rowId + '-batch');
+          selBatch.innerHTML = '<option value="">Memuat batch...</option>';
           try {
-            await apiPost('setRoleStok', { token: token(), idRelawan: btn.dataset.cabutPetugas, jadikanPetugas: false });
-            showSuccess('Akses Petugas Stok dicabut.');
-            await muatHakAkses();
-          } catch (err) { showError(err.message); }
-        });
-      });
-    } catch (err) {
-      showError(err.message);
-    }
-  }
-
-  el.btnTambahPetugas.addEventListener('click', async () => {
-    const idRelawan = el.selectRelawanAkses.value;
-    if (!idRelawan) { showError('Pilih relawan terlebih dahulu.'); return; }
-    try {
-      await apiPost('setRoleStok', { token: token(), idRelawan, jadikanPetugas: true });
-      showSuccess('Relawan dijadikan Petugas Stok.');
-      await muatHakAkses();
-    } catch (err) {
-      showError(err.message);
+            const batchList = await apiPost('getSiragaBatchList', { token: sesiAdminStok.token, idBarang: b.id });
+            selBatch.innerHTML = !batchList.length ? '<option value="">— Tidak ada batch tersedia —</option>' :
+              batchList.map(bt => `<option value="${bt.id}">${bt.nomorBatch} (Exp: ${bt.tanggalExpired || '-'}, Stok: ${formatRupiahSederhanaAdmin(bt.stok)}) ${bt.statusExpired === 'KEDALUWARSA' ? '⚠️ KEDALUWARSA' : bt.statusExpired === 'AKAN KEDALUWARSA' ? '⚠️ Akan Exp' : ''}</option>`).join('');
+          } catch (e) { selBatch.innerHTML = '<option value="">Gagal memuat batch</option>'; }
+        } else { batchWrap.style.display = 'none'; }
+        const warnStok = b.stok <= 0 ? ' ⚠️ STOK HABIS' : (b.statusStok === 'DI BAWAH MINIMUM' ? ' ⚠️ di bawah minimum' : '');
+        hint.textContent = 'Stok tersedia: ' + formatRupiahSederhanaAdmin(b.stok) + ' ' + b.satuan + warnStok;
+        hint.className = 'siraga-item-hint' + (b.stok <= 0 ? ' warn' : '');
+      }
     }
   });
-})();
+  registriBarisItemAdmin[rowId] = { dropdown, jenis };
+  return rowId;
+}
+
+function bacaSemuaBarisItemAdmin(containerId) {
+  const container = document.getElementById(containerId);
+  const items = [];
+  Array.from(container.children).forEach(div => {
+    const rowId = div.id;
+    const reg = registriBarisItemAdmin[rowId];
+    if (!reg) return;
+    const dipilih = reg.dropdown.getSelected();
+    if (!dipilih) throw new Error('Ada baris yang barangnya belum dipilih.');
+    const qty = Number(document.getElementById(rowId + '-qty').value);
+    if (!qty || qty <= 0) throw new Error('Qty untuk "' + dipilih.label + '" harus diisi lebih dari 0.');
+    const item = { idBarang: dipilih.id, qty: qty };
+    const batchSel = document.getElementById(rowId + '-batch');
+    if (batchSel && batchSel.value) item.idBatch = batchSel.value;
+    const produksiEl = document.getElementById(rowId + '-produksi');
+    const expiredEl = document.getElementById(rowId + '-expired');
+    if (produksiEl && produksiEl.value) item.tanggalProduksi = isoKeDmyTampilanAdmin(produksiEl.value);
+    if (expiredEl && expiredEl.value) item.tanggalExpired = isoKeDmyTampilanAdmin(expiredEl.value);
+    items.push(item);
+  });
+  if (!items.length) throw new Error('Minimal harus ada 1 barang.');
+  return items;
+}
+function kosongkanBarisItemAdmin(containerId) {
+  document.getElementById(containerId).innerHTML = '';
+  Object.keys(registriBarisItemAdmin).forEach(k => delete registriBarisItemAdmin[k]);
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+const A_STOK_SUB_PANEL = {
+  dashboard: 'aStokSubDashboard', barang: 'aStokSubBarang', masuk: 'aStokSubMasuk',
+  keluar: 'aStokSubKeluar', transfer: 'aStokSubTransfer', pemusnahan: 'aStokSubPemusnahan',
+  opname: 'aStokSubOpname', kartustok: 'aStokSubKartuStok', batch: 'aStokSubBatch',
+  laporan: 'aStokSubLaporan', kategori: 'aStokSubKategori', supplier: 'aStokSubSupplier',
+  tambahbarang: 'aStokSubTambahBarang', akses: 'aStokSubAkses', log: 'aStokSubLog'
+};
+const sudahDimuatTabAdminStok = {};
+
+async function pindahTabAdminStok(tab) {
+  document.querySelectorAll('#adminStokTabbar .stok-subtab').forEach(b => b.classList.toggle('active', b.dataset.asub === tab));
+  Object.values(A_STOK_SUB_PANEL).forEach(panelId => { document.getElementById(panelId).style.display = 'none'; });
+  document.getElementById(A_STOK_SUB_PANEL[tab]).style.display = 'block';
+
+  if (sudahDimuatTabAdminStok[tab]) return;
+  sudahDimuatTabAdminStok[tab] = true;
+  try {
+    if (tab === 'dashboard') await muatDashboardAdminStok();
+    else if (tab === 'barang') await muatDaftarBarangAdmin();
+    else if (tab === 'masuk') inisialisasiFormMasukAdmin();
+    else if (tab === 'keluar') inisialisasiFormKeluarAdmin();
+    else if (tab === 'transfer') inisialisasiFormTransferAdmin();
+    else if (tab === 'pemusnahan') inisialisasiFormPemusnahanAdmin();
+    else if (tab === 'opname') { inisialisasiOpnameAdmin(); await muatRiwayatOpnameAdmin(); }
+    else if (tab === 'kartustok') inisialisasiKartuStokAdmin();
+    else if (tab === 'batch') await muatBatchListAdmin();
+    else if (tab === 'laporan') await muatLaporanListAdmin();
+    else if (tab === 'kategori') { await muatKategoriListAdmin(); inisialisasiFormKategoriAdmin(); }
+    else if (tab === 'supplier') { await muatSupplierListAdmin(); inisialisasiFormSupplierAdmin(); }
+    else if (tab === 'tambahbarang') await inisialisasiFormTambahBarangAdmin();
+    else if (tab === 'akses') await muatHakAksesAdmin();
+    else if (tab === 'log') await muatLogAktivitasAdmin();
+  } catch (err) { showError(err.message || 'Gagal memuat data.'); }
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+async function muatDashboardAdminStok() {
+  showLoading('Memuat dashboard SIRAGA...');
+  try {
+    const d = await apiPost('getSiragaDashboardV2', { token: sesiAdminStok.token });
+    hideLoading();
+    document.getElementById('aDbTotalBarang').textContent = d.totalBarang;
+    document.getElementById('aDbBarangAktif').textContent = d.barangAktif;
+    document.getElementById('aDbStokAman').textContent = d.stokAman;
+    document.getElementById('aDbStokMendekati').textContent = d.stokMendekatiMinimum;
+    document.getElementById('aDbStokBawah').textContent = d.stokDiBawahMinimum;
+    document.getElementById('aDbStokHabis').textContent = d.barangHabis;
+    document.getElementById('aDbAkanExpired').textContent = d.akanExpired;
+    document.getElementById('aDbExpired').textContent = d.expired;
+    document.getElementById('aDbTransaksiHariIni').textContent = d.transaksiHariIni;
+    document.getElementById('aDbMasukHariIni').textContent = d.barangMasukHariIni;
+    document.getElementById('aDbKeluarHariIni').textContent = d.barangKeluarHariIni;
+  } catch (err) { hideLoading(); throw err; }
+}
+
+// ============================================================
+// DATA BARANG
+// ============================================================
+async function muatDaftarBarangAdmin(cari) {
+  const list = await apiPost('getSiragaBarangListAdmin', { token: sesiAdminStok.token });
+  const q = (cari || '').toLowerCase();
+  const filtered = q ? list.filter(b => b.nama.toLowerCase().indexOf(q) !== -1 || b.kode.toLowerCase().indexOf(q) !== -1) : list;
+  const container = document.getElementById('aBarangList');
+  if (!filtered.length) { container.innerHTML = '<div class="empty-state">Tidak ada barang ditemukan.</div>'; return; }
+  container.innerHTML = filtered.map(b => `
+    <div class="riwayat-item is-${b.status === 'AKTIF' ? badgeClassStatusStokAdmin(hitungStatusStokLokalAdmin(b)) : 'tidak-hadir'}">
+      <div class="riwayat-item-detail">
+        <div class="riwayat-item-top">
+          <strong class="riwayat-item-shift">${escapeHtml(b.nama)}</strong>
+          <span class="riwayat-badge ${b.status === 'AKTIF' ? 'hadir' : 'tidak-hadir'}">${b.status}</span>
+        </div>
+        <div class="riwayat-item-jam">${escapeHtml(b.namaKategori)} · ${b.kode}</div>
+        <div class="riwayat-item-jam">Stok: <strong>${formatRupiahSederhanaAdmin(b.stok)} ${b.satuan}</strong> (Minimum: ${formatRupiahSederhanaAdmin(b.stokMinimum)})</div>
+        <button class="btn-mini" data-id="${b.id}" data-status="${b.status === 'AKTIF' ? 'NONAKTIF' : 'AKTIF'}" onclick="toggleStatusBarangAdmin(this)" style="margin-top:6px;">${b.status === 'AKTIF' ? 'Nonaktifkan' : 'Aktifkan'}</button>
+      </div>
+    </div>`).join('');
+}
+function hitungStatusStokLokalAdmin(b) {
+  if (b.stok <= 0) return 'HABIS';
+  if (b.stok <= b.stokMinimum) return 'DI BAWAH MINIMUM';
+  if (b.stok <= b.stokMinimum * 1.2) return 'MENDEKATI MINIMUM';
+  return 'AMAN';
+}
+async function toggleStatusBarangAdmin(btn) {
+  try { await apiPost('updateSiragaBarangStatus', { token: sesiAdminStok.token, id: btn.dataset.id, status: btn.dataset.status }); await muatDaftarBarangAdmin(document.getElementById('aBarangCari').value.trim()); }
+  catch (err) { showError(err.message); }
+}
+
+// ============================================================
+// BARANG MASUK / KELUAR / TRANSFER / PEMUSNAHAN (identik pola siraga.js relawan)
+// ============================================================
+let formMasukAdminSiap = false;
+function inisialisasiFormMasukAdmin() {
+  if (formMasukAdminSiap) return; formMasukAdminSiap = true;
+  document.getElementById('aMasukTanggal').value = tanggalHariIniIsoAdmin();
+  apiPost('getSiragaSupplierList', { token: sesiAdminStok.token }).then(list => {
+    list.forEach(s => document.getElementById('aMasukSupplier').insertAdjacentHTML('beforeend', `<option value="${s.id}">${escapeHtml(s.nama)}</option>`));
+  }).catch(() => {});
+  tambahBarisItemAdmin('aMasukDaftarItem', 'MASUK');
+  document.getElementById('aBtnTambahBarisMasuk').addEventListener('click', () => tambahBarisItemAdmin('aMasukDaftarItem', 'MASUK'));
+  document.getElementById('aBtnSimpanMasuk').addEventListener('click', async () => {
+    const tombol = document.getElementById('aBtnSimpanMasuk');
+    try {
+      const items = bacaSemuaBarisItemAdmin('aMasukDaftarItem');
+      tombol.disabled = true; tombol.textContent = 'Menyimpan...';
+      const hasil = await apiPost('siragaBarangMasuk', { token: sesiAdminStok.token, tanggal: isoKeDmyTampilanAdmin(document.getElementById('aMasukTanggal').value), idSupplier: document.getElementById('aMasukSupplier').value, keterangan: document.getElementById('aMasukKeterangan').value.trim(), items: items });
+      showError('✅ Transaksi ' + hasil.nomorTransaksi + ' berhasil disimpan.');
+      kosongkanBarisItemAdmin('aMasukDaftarItem'); tambahBarisItemAdmin('aMasukDaftarItem', 'MASUK');
+      document.getElementById('aMasukKeterangan').value = '';
+      Object.keys(sudahDimuatTabAdminStok).forEach(k => delete sudahDimuatTabAdminStok[k]);
+    } catch (err) { showError(err.message || 'Gagal menyimpan transaksi.'); }
+    finally { tombol.disabled = false; tombol.textContent = 'Simpan Transaksi Masuk'; }
+  });
+}
+
+let formKeluarAdminSiap = false;
+function inisialisasiFormKeluarAdmin() {
+  if (formKeluarAdminSiap) return; formKeluarAdminSiap = true;
+  document.getElementById('aKeluarTanggal').value = tanggalHariIniIsoAdmin();
+  tambahBarisItemAdmin('aKeluarDaftarItem', 'KELUAR');
+  document.getElementById('aBtnTambahBarisKeluar').addEventListener('click', () => tambahBarisItemAdmin('aKeluarDaftarItem', 'KELUAR'));
+  document.getElementById('aBtnSimpanKeluar').addEventListener('click', async () => {
+    const tombol = document.getElementById('aBtnSimpanKeluar');
+    try {
+      const tujuan = document.getElementById('aKeluarTujuan').value;
+      if (!tujuan) throw new Error('Tujuan wajib dipilih.');
+      const items = bacaSemuaBarisItemAdmin('aKeluarDaftarItem');
+      tombol.disabled = true; tombol.textContent = 'Menyimpan...';
+      const hasil = await apiPost('siragaBarangKeluar', { token: sesiAdminStok.token, tanggal: isoKeDmyTampilanAdmin(document.getElementById('aKeluarTanggal').value), tujuan: tujuan, keterangan: document.getElementById('aKeluarKeterangan').value.trim(), items: items });
+      showError('✅ Transaksi ' + hasil.nomorTransaksi + ' berhasil disimpan.');
+      kosongkanBarisItemAdmin('aKeluarDaftarItem'); tambahBarisItemAdmin('aKeluarDaftarItem', 'KELUAR');
+      document.getElementById('aKeluarKeterangan').value = '';
+      Object.keys(sudahDimuatTabAdminStok).forEach(k => delete sudahDimuatTabAdminStok[k]);
+    } catch (err) { showError(err.message || 'Gagal menyimpan transaksi.'); }
+    finally { tombol.disabled = false; tombol.textContent = 'Simpan Transaksi Keluar'; }
+  });
+}
+
+let formTransferAdminSiap = false;
+function inisialisasiFormTransferAdmin() {
+  if (formTransferAdminSiap) return; formTransferAdminSiap = true;
+  document.getElementById('aTransferTanggal').value = tanggalHariIniIsoAdmin();
+  tambahBarisItemAdmin('aTransferDaftarItem', 'TRANSFER');
+  document.getElementById('aBtnTambahBarisTransfer').addEventListener('click', () => tambahBarisItemAdmin('aTransferDaftarItem', 'TRANSFER'));
+  document.getElementById('aBtnSimpanTransfer').addEventListener('click', async () => {
+    const tombol = document.getElementById('aBtnSimpanTransfer');
+    try {
+      const sumber = document.getElementById('aTransferSumber').value.trim();
+      const tujuan = document.getElementById('aTransferTujuan').value.trim();
+      if (!sumber || !tujuan) throw new Error('Sumber dan Tujuan wajib diisi.');
+      const items = bacaSemuaBarisItemAdmin('aTransferDaftarItem');
+      tombol.disabled = true; tombol.textContent = 'Menyimpan...';
+      const hasil = await apiPost('siragaTransfer', { token: sesiAdminStok.token, tanggal: isoKeDmyTampilanAdmin(document.getElementById('aTransferTanggal').value), sumber: sumber, tujuan: tujuan, keterangan: document.getElementById('aTransferKeterangan').value.trim(), items: items });
+      showError('✅ Transfer ' + hasil.nomorTransaksi + ' berhasil disimpan.');
+      kosongkanBarisItemAdmin('aTransferDaftarItem'); tambahBarisItemAdmin('aTransferDaftarItem', 'TRANSFER');
+      document.getElementById('aTransferKeterangan').value = '';
+      Object.keys(sudahDimuatTabAdminStok).forEach(k => delete sudahDimuatTabAdminStok[k]);
+    } catch (err) { showError(err.message || 'Gagal menyimpan transfer.'); }
+    finally { tombol.disabled = false; tombol.textContent = 'Simpan Transfer'; }
+  });
+}
+
+let formPemusnahanAdminSiap = false;
+function inisialisasiFormPemusnahanAdmin() {
+  if (formPemusnahanAdminSiap) return; formPemusnahanAdminSiap = true;
+  document.getElementById('aPemusnahanTanggal').value = tanggalHariIniIsoAdmin();
+  tambahBarisItemAdmin('aPemusnahanDaftarItem', 'PEMUSNAHAN');
+  document.getElementById('aBtnTambahBarisPemusnahan').addEventListener('click', () => tambahBarisItemAdmin('aPemusnahanDaftarItem', 'PEMUSNAHAN'));
+  document.getElementById('aPemusnahanAlasan').addEventListener('change', (e) => { document.getElementById('aPemusnahanKetWajib').style.display = e.target.value === 'LAINNYA' ? 'inline' : 'none'; });
+  document.getElementById('aBtnSimpanPemusnahan').addEventListener('click', async () => {
+    const tombol = document.getElementById('aBtnSimpanPemusnahan');
+    try {
+      const alasan = document.getElementById('aPemusnahanAlasan').value;
+      if (!alasan) throw new Error('Alasan pemusnahan wajib dipilih.');
+      const keterangan = document.getElementById('aPemusnahanKeterangan').value.trim();
+      if (alasan === 'LAINNYA' && !keterangan) throw new Error('Keterangan wajib diisi untuk alasan "Lainnya".');
+      const items = bacaSemuaBarisItemAdmin('aPemusnahanDaftarItem');
+      tombol.disabled = true; tombol.textContent = 'Menyimpan...';
+      const hasil = await apiPost('siragaPemusnahan', { token: sesiAdminStok.token, tanggal: isoKeDmyTampilanAdmin(document.getElementById('aPemusnahanTanggal').value), alasanPemusnahan: alasan, keterangan: keterangan, items: items });
+      showError('✅ Pemusnahan ' + hasil.nomorTransaksi + ' berhasil dicatat.');
+      kosongkanBarisItemAdmin('aPemusnahanDaftarItem'); tambahBarisItemAdmin('aPemusnahanDaftarItem', 'PEMUSNAHAN');
+      document.getElementById('aPemusnahanKeterangan').value = '';
+      Object.keys(sudahDimuatTabAdminStok).forEach(k => delete sudahDimuatTabAdminStok[k]);
+    } catch (err) { showError(err.message || 'Gagal menyimpan pemusnahan.'); }
+    finally { tombol.disabled = false; tombol.textContent = 'Simpan Pemusnahan'; }
+  });
+}
+
+// ============================================================
+// STOCK OPNAME
+// ============================================================
+let opnameAdminSiap = false;
+let opnameAdminAktifId = null;
+function inisialisasiOpnameAdmin() {
+  if (opnameAdminSiap) return; opnameAdminSiap = true;
+  const dropdownOpname = buatSearchableDropdownAdmin('aOpnameBarangDropdown', {
+    placeholder: 'Cari barang untuk di-opname...', fetchList: fetchBarangUntukDropdownAdmin,
+    onSelect: () => { document.getElementById('aBtnMulaiOpname').disabled = false; }
+  });
+  document.getElementById('aBtnMulaiOpname').addEventListener('click', async () => {
+    const dipilih = dropdownOpname.getSelected();
+    if (!dipilih) return;
+    try {
+      showLoading('Mengambil snapshot stok sistem...');
+      const hasil = await apiPost('mulaiSiragaOpname', { token: sesiAdminStok.token, idBarang: dipilih.id });
+      hideLoading();
+      opnameAdminAktifId = hasil.id;
+      document.getElementById('aOpnameNamaBarang').textContent = hasil.namaBarang;
+      document.getElementById('aOpnameStokSistem').textContent = formatRupiahSederhanaAdmin(hasil.stokSistem) + ' ' + hasil.satuan;
+      document.getElementById('aOpnameStokFisik').value = '';
+      document.getElementById('aOpnameSelisihRow').style.display = 'none';
+      document.getElementById('aBtnSelesaikanOpname').disabled = true;
+      document.getElementById('aOpnameFormMulai').style.display = 'none';
+      document.getElementById('aOpnameFormFisik').classList.remove('is-hidden');
+    } catch (err) { hideLoading(); showError(err.message || 'Gagal memulai opname.'); }
+  });
+  document.getElementById('aOpnameStokFisik').addEventListener('input', async (e) => {
+    if (e.target.value === '') { document.getElementById('aOpnameSelisihRow').style.display = 'none'; document.getElementById('aBtnSelesaikanOpname').disabled = true; return; }
+    try {
+      const hasil = await apiPost('isiStokFisikSiragaOpname', { token: sesiAdminStok.token, id: opnameAdminAktifId, stokFisik: Number(e.target.value) });
+      document.getElementById('aOpnameSelisihRow').style.display = 'flex';
+      const el = document.getElementById('aOpnameSelisih');
+      el.textContent = (hasil.selisih > 0 ? '+' : '') + formatRupiahSederhanaAdmin(hasil.selisih);
+      el.style.color = hasil.selisih === 0 ? 'var(--color-text)' : (hasil.selisih > 0 ? 'var(--color-success)' : 'var(--color-danger)');
+      document.getElementById('aBtnSelesaikanOpname').disabled = false;
+    } catch (err) { showError(err.message); }
+  });
+  document.getElementById('aBtnSelesaikanOpname').addEventListener('click', async () => {
+    try {
+      showLoading('Menyelesaikan opname...');
+      const hasil = await apiPost('selesaikanSiragaOpname', { token: sesiAdminStok.token, id: opnameAdminAktifId });
+      hideLoading();
+      showError(hasil.selisih === 0 ? '✅ Opname selesai, tidak ada selisih.' : '✅ Opname selesai. Penyesuaian ' + (hasil.selisih > 0 ? '+' : '') + hasil.selisih + ' tercatat otomatis.');
+      tutupFormOpnameFisikAdmin(); await muatRiwayatOpnameAdmin();
+      delete sudahDimuatTabAdminStok.dashboard; delete sudahDimuatTabAdminStok.barang; delete sudahDimuatTabAdminStok.laporan;
+    } catch (err) { hideLoading(); showError(err.message || 'Gagal menyelesaikan opname.'); }
+  });
+  document.getElementById('aBtnBatalOpname').addEventListener('click', async () => {
+    if (!confirm('Batalkan opname ini?')) return;
+    try { await apiPost('batalkanSiragaOpname', { token: sesiAdminStok.token, id: opnameAdminAktifId }); tutupFormOpnameFisikAdmin(); await muatRiwayatOpnameAdmin(); }
+    catch (err) { showError(err.message || 'Gagal membatalkan opname.'); }
+  });
+  function tutupFormOpnameFisikAdmin() {
+    opnameAdminAktifId = null;
+    document.getElementById('aOpnameFormFisik').classList.add('is-hidden');
+    document.getElementById('aOpnameFormMulai').style.display = 'block';
+    dropdownOpname.reset();
+    document.getElementById('aBtnMulaiOpname').disabled = true;
+  }
+}
+async function muatRiwayatOpnameAdmin() {
+  const list = await apiPost('getSiragaOpnameList', { token: sesiAdminStok.token });
+  const container = document.getElementById('aOpnameList');
+  if (!list.length) { container.innerHTML = '<div class="empty-state">Belum ada riwayat opname.</div>'; return; }
+  container.innerHTML = list.slice(0, 50).map(o => `
+    <div class="riwayat-item is-${badgeClassStatusTransaksiAdmin(o.status)}"><div class="riwayat-item-detail">
+      <div class="riwayat-item-top"><strong class="riwayat-item-shift">${escapeHtml(o.namaBarang)}</strong><span class="riwayat-badge ${badgeClassStatusTransaksiAdmin(o.status)}">${o.status}</span></div>
+      <div class="riwayat-item-jam">${o.tanggal} · Sistem: ${formatRupiahSederhanaAdmin(o.stokSistem)} · Fisik: ${o.stokFisik !== '' ? formatRupiahSederhanaAdmin(o.stokFisik) : '-'} · Selisih: ${o.selisih !== '' ? o.selisih : '-'}</div>
+    </div></div>`).join('');
+}
+
+// ============================================================
+// KARTU STOK
+// ============================================================
+let kartuStokAdminSiap = false;
+function inisialisasiKartuStokAdmin() {
+  if (kartuStokAdminSiap) return; kartuStokAdminSiap = true;
+  buatSearchableDropdownAdmin('aKartuStokBarangDropdown', {
+    placeholder: 'Cari barang...', fetchList: fetchBarangUntukDropdownAdmin,
+    onSelect: async (item) => {
+      const hasilDiv = document.getElementById('aKartuStokHasil');
+      hasilDiv.innerHTML = '<div class="empty-state">Memuat kartu stok...</div>';
+      try {
+        const hasil = await apiPost('getSiragaKartuStok', { token: sesiAdminStok.token, idBarang: item.id });
+        if (!hasil.kartu.length) { hasilDiv.innerHTML = '<div class="empty-state">Belum ada mutasi untuk barang ini.</div>'; return; }
+        hasilDiv.innerHTML = `
+          <div class="stat-tile" style="margin:14px 0;"><span class="stat-tile-num">${formatRupiahSederhanaAdmin(hasil.saldoAkhir)}</span><span class="stat-tile-label">Saldo Akhir</span></div>
+          <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="text-align:left;border-bottom:2px solid var(--color-border);"><th style="padding:6px;">Tgl</th><th>Jenis</th><th>Masuk</th><th>Keluar</th><th>Saldo</th></tr></thead>
+            <tbody>${hasil.kartu.map(k => `<tr style="border-bottom:1px solid var(--color-border);"><td style="padding:6px;">${k.tanggal}</td><td>${k.jenis}</td><td>${k.masuk || ''}</td><td>${k.keluar || ''}</td><td><strong>${formatRupiahSederhanaAdmin(k.saldo)}</strong></td></tr>`).join('')}</tbody>
+          </table></div>`;
+      } catch (err) { hasilDiv.innerHTML = '<div class="empty-state">Gagal memuat.</div>'; showError(err.message); }
+    }
+  });
+}
+
+// ============================================================
+// BATCH & KEDALUWARSA
+// ============================================================
+async function muatBatchListAdmin() {
+  document.getElementById('aBtnMuatBatch').addEventListener('click', muatBatchListAdmin_);
+  await muatBatchListAdmin_();
+}
+async function muatBatchListAdmin_() {
+  const status = document.getElementById('aBatchFilterStatus').value;
+  const list = await apiPost('getSiragaBatchListAdmin', { token: sesiAdminStok.token, statusExpired: status });
+  const container = document.getElementById('aBatchList');
+  if (!list.length) { container.innerHTML = '<div class="empty-state">Tidak ada batch ditemukan.</div>'; return; }
+  container.innerHTML = list.map(b => `
+    <div class="riwayat-item is-${badgeClassStatusExpiredAdmin(b.statusExpired)}"><div class="riwayat-item-detail">
+      <div class="riwayat-item-top"><strong class="riwayat-item-shift">${escapeHtml(b.namaBarang)}</strong><span class="riwayat-badge ${badgeClassStatusExpiredAdmin(b.statusExpired)}">${b.statusExpired || '-'}</span></div>
+      <div class="riwayat-item-jam">${b.nomorBatch} · Expired: ${b.tanggalExpired || '-'} · Stok: ${formatRupiahSederhanaAdmin(b.stok)}</div>
+    </div></div>`).join('');
+}
+
+// ============================================================
+// LAPORAN
+// ============================================================
+async function muatLaporanListAdmin() {
+  document.getElementById('aBtnMuatLaporan').addEventListener('click', muatLaporanListAdmin_);
+  await muatLaporanListAdmin_();
+}
+async function muatLaporanListAdmin_() {
+  const jenis = document.getElementById('aLaporanFilterJenis').value;
+  const status = document.getElementById('aLaporanFilterStatus').value;
+  const list = await apiPost('getSiragaTransaksiList', { token: sesiAdminStok.token, jenis: jenis, status: status });
+  const container = document.getElementById('aLaporanList');
+  if (!list.length) { container.innerHTML = '<div class="empty-state">Tidak ada transaksi ditemukan.</div>'; return; }
+  container.innerHTML = list.map(t => `
+    <div class="riwayat-item is-${badgeClassStatusTransaksiAdmin(t.status)}"><div class="riwayat-item-detail">
+      <div class="riwayat-item-top"><strong class="riwayat-item-shift">${t.nomor}</strong><span class="riwayat-badge ${badgeClassStatusTransaksiAdmin(t.status)}">${t.status}</span></div>
+      <div class="riwayat-item-jam">${t.jenis} · ${t.tanggal} · ${escapeHtml(t.namaPetugas)}</div>
+      ${t.keterangan ? `<div class="riwayat-item-jam">${escapeHtml(t.keterangan)}</div>` : ''}
+    </div></div>`).join('');
+}
+
+// ============================================================
+// KATEGORI
+// ============================================================
+let formKategoriAdminSiap = false;
+function inisialisasiFormKategoriAdmin() {
+  if (formKategoriAdminSiap) return; formKategoriAdminSiap = true;
+  document.getElementById('aBtnTambahKategori').addEventListener('click', async () => {
+    const nama = document.getElementById('aKategoriBaruNama').value.trim();
+    if (!nama) return;
+    try { await apiPost('addSiragaKategori', { token: sesiAdminStok.token, nama: nama }); document.getElementById('aKategoriBaruNama').value = ''; await muatKategoriListAdmin(); }
+    catch (err) { showError(err.message); }
+  });
+}
+async function muatKategoriListAdmin() {
+  const list = await apiPost('getSiragaKategoriListAdmin', { token: sesiAdminStok.token });
+  document.getElementById('aKategoriList').innerHTML = list.map(k => `
+    <div class="riwayat-item is-${k.status === 'AKTIF' ? 'hadir' : 'tidak-hadir'}"><div class="riwayat-item-detail"><div class="riwayat-item-top"><strong class="riwayat-item-shift">${escapeHtml(k.nama)}</strong>
+    <button class="btn-mini" data-id="${k.id}" data-status="${k.status === 'AKTIF' ? 'NONAKTIF' : 'AKTIF'}" onclick="toggleStatusKategoriAdmin(this)">${k.status === 'AKTIF' ? 'Nonaktifkan' : 'Aktifkan'}</button></div></div></div>`).join('') || '<div class="empty-state">Belum ada kategori.</div>';
+}
+async function toggleStatusKategoriAdmin(btn) {
+  try { await apiPost('updateSiragaKategoriStatus', { token: sesiAdminStok.token, id: btn.dataset.id, status: btn.dataset.status }); await muatKategoriListAdmin(); }
+  catch (err) { showError(err.message); }
+}
+
+// ============================================================
+// SUPPLIER
+// ============================================================
+let formSupplierAdminSiap = false;
+function inisialisasiFormSupplierAdmin() {
+  if (formSupplierAdminSiap) return; formSupplierAdminSiap = true;
+  document.getElementById('aBtnTambahSupplier').addEventListener('click', async () => {
+    const nama = document.getElementById('aSupplierBaruNama').value.trim();
+    if (!nama) return;
+    try {
+      await apiPost('addSiragaSupplier', { token: sesiAdminStok.token, nama: nama, kontak: document.getElementById('aSupplierBaruKontak').value.trim(), alamat: document.getElementById('aSupplierBaruAlamat').value.trim() });
+      document.getElementById('aSupplierBaruNama').value = ''; document.getElementById('aSupplierBaruKontak').value = ''; document.getElementById('aSupplierBaruAlamat').value = '';
+      await muatSupplierListAdmin();
+    } catch (err) { showError(err.message); }
+  });
+}
+async function muatSupplierListAdmin() {
+  const list = await apiPost('getSiragaSupplierListAdmin', { token: sesiAdminStok.token });
+  document.getElementById('aSupplierList').innerHTML = list.map(s => `
+    <div class="riwayat-item is-${s.status === 'AKTIF' ? 'hadir' : 'tidak-hadir'}"><div class="riwayat-item-detail"><div class="riwayat-item-top"><strong class="riwayat-item-shift">${escapeHtml(s.nama)}</strong>
+    <button class="btn-mini" data-id="${s.id}" data-status="${s.status === 'AKTIF' ? 'NONAKTIF' : 'AKTIF'}" onclick="toggleStatusSupplierAdmin(this)">${s.status === 'AKTIF' ? 'Nonaktifkan' : 'Aktifkan'}</button></div>
+    <div class="riwayat-item-jam">${escapeHtml(s.kontak || '-')}</div></div></div>`).join('') || '<div class="empty-state">Belum ada supplier.</div>';
+}
+async function toggleStatusSupplierAdmin(btn) {
+  try { await apiPost('updateSiragaSupplier', { token: sesiAdminStok.token, id: btn.dataset.id, status: btn.dataset.status }); await muatSupplierListAdmin(); }
+  catch (err) { showError(err.message); }
+}
+
+// ============================================================
+// TAMBAH BARANG (dipicu tombol di tab Data Barang)
+// ============================================================
+let formTambahBarangAdminSiap = false;
+async function inisialisasiFormTambahBarangAdmin() {
+  if (formTambahBarangAdminSiap) { return; }
+  formTambahBarangAdminSiap = true;
+  const selKategori = document.getElementById('aBarangBaruKategori');
+  const kategoriList = await apiPost('getSiragaKategoriList', { token: sesiAdminStok.token });
+  kategoriList.forEach(k => selKategori.insertAdjacentHTML('beforeend', `<option value="${k.id}">${escapeHtml(k.nama)}</option>`));
+  const selSatuan = document.getElementById('aBarangBaruSatuan');
+  const satuanList = await apiPost('getSiragaSatuanList', {});
+  satuanList.forEach(s => selSatuan.insertAdjacentHTML('beforeend', `<option value="${s}">${s}</option>`));
+
+  document.getElementById('aBtnSimpanBarangBaru').addEventListener('click', async () => {
+    const tombol = document.getElementById('aBtnSimpanBarangBaru');
+    try {
+      const nama = document.getElementById('aBarangBaruNama').value.trim();
+      const idKategori = selKategori.value;
+      const satuan = selSatuan.value;
+      if (!nama || !idKategori || !satuan) throw new Error('Nama, Kategori, dan Satuan wajib diisi.');
+      tombol.disabled = true;
+      await apiPost('addSiragaBarang', {
+        token: sesiAdminStok.token, nama: nama, idKategori: idKategori, satuan: satuan,
+        stokMinimum: Number(document.getElementById('aBarangBaruStokMinimum').value) || 0,
+        kelolaBatch: document.getElementById('aBarangBaruKelolaBatch').checked,
+        kelolaExpired: document.getElementById('aBarangBaruKelolaExpired').checked
+      });
+      showError('✅ Barang berhasil ditambahkan.');
+      document.getElementById('aBarangBaruNama').value = '';
+      document.getElementById('aBarangBaruStokMinimum').value = '0';
+      document.getElementById('aBarangBaruKelolaBatch').checked = false;
+      document.getElementById('aBarangBaruKelolaExpired').checked = false;
+      delete sudahDimuatTabAdminStok.barang;
+      await pindahTabAdminStok('barang'); // balik otomatis ke Data Barang, langsung lihat barang baru
+    } catch (err) { showError(err.message || 'Gagal menambah barang.'); }
+    finally { tombol.disabled = false; }
+  });
+
+  document.getElementById('aBtnBukaTambahBarang').addEventListener('click', () => pindahTabAdminStokPaksa('tambahbarang'));
+}
+// Versi paksa -- dipakai tombol "+ Tambah Barang" di tab Data Barang, TIDAK menghitung sbg tab tabbar aktif
+async function pindahTabAdminStokPaksa(tab) {
+  Object.values(A_STOK_SUB_PANEL).forEach(panelId => { document.getElementById(panelId).style.display = 'none'; });
+  document.getElementById(A_STOK_SUB_PANEL[tab]).style.display = 'block';
+  if (!sudahDimuatTabAdminStok[tab]) { sudahDimuatTabAdminStok[tab] = true; if (tab === 'tambahbarang') await inisialisasiFormTambahBarangAdmin(); }
+}
+
+// ============================================================
+// HAK AKSES
+// ============================================================
+async function muatHakAksesAdmin() {
+  const [petugas, semuaRelawan] = await Promise.all([
+    apiPost('getDaftarPetugasStok', { token: sesiAdminStok.token }),
+    apiGet('getRelawan', { token: sesiAdminStok.token, semua: '0' })
+  ]);
+  const idPetugasSet = new Set(petugas.map(p => p.idRelawan));
+  const container = document.getElementById('aHakAksesList');
+  container.innerHTML = `
+    <p class="section-title">Petugas Stok Saat Ini</p>
+    ${petugas.map(p => `<div class="riwayat-item is-hadir"><div class="riwayat-item-detail"><div class="riwayat-item-top"><strong class="riwayat-item-shift">${escapeHtml(p.nama)}</strong>
+      <button class="btn-mini" data-id="${p.idRelawan}" data-jadi="false" onclick="ubahRoleStokAdmin(this)">Cabut Akses</button></div></div></div>`).join('') || '<div class="empty-state">Belum ada Petugas Stok.</div>'}
+    <p class="section-title" style="margin-top:18px;">Tambahkan Petugas Baru</p>
+    <select id="aPilihRelawanBaruPetugas" class="form-field-input" style="margin-bottom:8px;">
+      <option value="">— Pilih Relawan —</option>
+      ${semuaRelawan.filter(r => !idPetugasSet.has(r.id)).map(r => `<option value="${r.id}">${escapeHtml(r.nama)}</option>`).join('')}
+    </select>
+    <button class="btn-submit" id="aBtnJadikanPetugas">+ Berikan Akses Petugas Stok</button>
+  `;
+  document.getElementById('aBtnJadikanPetugas').addEventListener('click', async () => {
+    const id = document.getElementById('aPilihRelawanBaruPetugas').value;
+    if (!id) return;
+    try { await apiPost('setRoleStok', { token: sesiAdminStok.token, idRelawan: id, jadikanPetugas: true }); await muatHakAksesAdmin(); }
+    catch (err) { showError(err.message); }
+  });
+}
+async function ubahRoleStokAdmin(btn) {
+  try { await apiPost('setRoleStok', { token: sesiAdminStok.token, idRelawan: btn.dataset.id, jadikanPetugas: btn.dataset.jadi === 'true' }); await muatHakAksesAdmin(); }
+  catch (err) { showError(err.message); }
+}
+
+// ============================================================
+// LOG AKTIVITAS
+// ============================================================
+async function muatLogAktivitasAdmin() {
+  const list = await apiPost('getSiragaActivityLogs', { token: sesiAdminStok.token });
+  document.getElementById('aLogAktivitasList').innerHTML = list.map(l => `
+    <div class="riwayat-item is-belum-absen"><div class="riwayat-item-detail">
+      <div class="riwayat-item-top"><strong class="riwayat-item-shift">${l.aksi}</strong></div>
+      <div class="riwayat-item-jam">${escapeHtml(l.aktor)} · ${l.waktu ? new Date(l.waktu).toLocaleString('id-ID') : '-'}</div>
+    </div></div>`).join('') || '<div class="empty-state">Belum ada log.</div>';
+}
+
+// ============================================================
+// INIT (lazy-loaded, mengikuti pola admin-stok.js lama)
+// ============================================================
+function initStok() {
+  sesiAdminStok = ambilSesiAdmin();
+  if (!sesiAdminStok || !sesiAdminStok.token) return;
+
+  document.querySelectorAll('#adminStokTabbar .stok-subtab').forEach(btn => {
+    btn.addEventListener('click', () => pindahTabAdminStok(btn.dataset.asub));
+  });
+  document.getElementById('aBarangCari').addEventListener('input', (e) => {
+    clearTimeout(window._aSiragaCariTimeout);
+    window._aSiragaCariTimeout = setTimeout(() => muatDaftarBarangAdmin(e.target.value.trim()), 350);
+  });
+
+  pindahTabAdminStok('dashboard').catch(err => showError(err.message || 'Gagal memuat SIRAGA. Pastikan SIRAGA_SPREADSHEET_ID sudah diisi di Script Properties.'));
+}
+
+let sudahInit = false;
+window.addEventListener('sppg-admin-ready', () => { if (!sudahInit) { sudahInit = true; initStok(); } });

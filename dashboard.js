@@ -1,10 +1,16 @@
 // ============================================================
 // SPPG JEUNGJING — LOGIC DASHBOARD RELAWAN (dashboard.html)
-// Struktur baru sesuai brief: Hero, Status Operasional, Jadwal Saya,
-// Ringkasan SIPRES (Kehadiran Hari Ini + Detail Presensi + Ringkasan
-// Kehadiran), Informasi Penting. SATU pemanggilan getDashboardLengkapRelawan
-// (bukan banyak request terpisah) -- backend-nya sendiri memanggil ulang
-// fungsi-fungsi yang sudah ada (tidak duplikat logic).
+// Struktur: Hero, Status Operasional, Jadwal Saya, Ringkasan SIPRES
+// (Kehadiran Hari Ini + Detail Presensi + Ringkasan Kehadiran),
+// Informasi Penting.
+//
+// AUDIT PERFORMANCE (disetujui): dipecah jadi 2 permintaan independen,
+// bukan lagi satu getDashboardLengkapRelawan yang menahan seluruh render.
+// getDashboardRelawanP0 = Identitas/Status Operasional/Jadwal/Presensi
+// Hari Ini (dibutuhkan segera, dirender lebih dulu). getDashboardRelawanP1
+// = Ringkasan Kehadiran + Informasi Penting (menyusul, tidak menahan P0).
+// Backend endpoint LAMA (getDashboardLengkapRelawan) TIDAK dihapus --
+// dipertahankan utuh untuk rollback aman, cuma tidak dipanggil di sini lagi.
 // ============================================================
 
 let _leafletDimuat = false;
@@ -46,10 +52,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---- MENU UTAMA: tombol "Lainnya" -- dipasang PALING AWAL, TIDAK
   // bergantung pada berhasil/gagalnya pemuatan data Dashboard di bawah.
-  // (Sebelumnya listener ini ditaruh di akhir alur async yang panjang --
-  // kalau ada satu saja data yang gagal di tengah jalan, listener ini
-  // tidak pernah terpasang sama sekali, membuat tombol terlihat aktif
-  // tapi sebenarnya tidak bisa diklik.)
   const btnLainnya = document.getElementById('btnMenuLainnya');
   if (btnLainnya) {
     btnLainnya.addEventListener('click', () => {
@@ -58,9 +60,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // ============================================================
+  // AUDIT PERFORMANCE (disetujui) — P0 dan P1 SEKARANG DUA PERMINTAAN
+  // INDEPENDEN (sebelumnya SATU getDashboardLengkapRelawan yang menahan
+  // seluruh render sampai semuanya siap). P0 = Identitas/Status
+  // Operasional/Jadwal/Presensi Hari Ini -- yang relawan BUTUH segera.
+  // P1 = Ringkasan Kehadiran + Informasi Penting -- boleh menyusul.
+  // Pola fetch-independen + render-per-bagian ini SAMA PERSIS dengan
+  // yang sudah terbukti jalan di admin.js (SUMBER_DASHBOARD).
+  // ============================================================
+
+  let tglFormatDariP0 = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
   try {
     showLoading('Memuat dashboard...');
-    const d = await apiGet('getDashboardLengkapRelawan', { token: sesi.token });
+    const d = await apiGet('getDashboardRelawanP0', { token: sesi.token });
     hideLoading();
 
     // ---- HERO ----
@@ -72,26 +86,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('heroIdDivisi').textContent = (d.identitas.id || '–') + ' • ' + (d.identitas.divisi || '–');
 
     // ---- KOTAK INFORMASI OPERASIONAL ----
-    // PERBAIKAN: sebelumnya tanggal SELALU dihitung dari jam HP/laptop
-    // masing-masing (new Date()), padahal statusOperasional dari backend
-    // sekarang bisa merujuk BESOK (shift malam yang sudah masuk jendela
-    // waktunya) -- backend & tampilan jadi tidak sinkron. Sekarang pakai
-    // tanggal/hari yang backend kirim (sudah shift-aware, sama dgn yang
-    // dipakai "Jadwal Saya" di bawah), fallback ke tanggal hari ini kalau
-    // backend tidak mengirimkannya (mis. status LIBUR).
-    let namaHari, tglFormat;
+    let namaHari;
     if (d.statusOperasional.tanggal && d.statusOperasional.hari) {
       namaHari = d.statusOperasional.hari;
       const bagianTgl = String(d.statusOperasional.tanggal).split('/'); // DD/MM/YYYY
       const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-      tglFormat = bagianTgl.length === 3
+      tglFormatDariP0 = bagianTgl.length === 3
         ? (parseInt(bagianTgl[0], 10) + ' ' + namaBulan[parseInt(bagianTgl[1], 10) - 1] + ' ' + bagianTgl[2])
         : d.statusOperasional.tanggal;
     } else {
       namaHari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][new Date().getDay()];
-      tglFormat = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     }
-    document.getElementById('infoOperasionalTanggal').textContent = '📅 ' + namaHari + ', ' + tglFormat;
+    document.getElementById('infoOperasionalTanggal').textContent = '📅 ' + namaHari + ', ' + tglFormatDariP0;
     document.getElementById('infoOperasionalStatus').textContent = d.statusOperasional.label;
 
     // ---- JADWAL SAYA ----
@@ -119,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('ringkasStatusHariIni').textContent = statusHariIni;
 
     // ---- DETAIL PRESENSI (toggle) ----
-    document.getElementById('detailTanggal').textContent = p.operasional && p.operasional.tanggal ? p.operasional.tanggal : tglFormat;
+    document.getElementById('detailTanggal').textContent = p.operasional && p.operasional.tanggal ? p.operasional.tanggal : tglFormatDariP0;
     document.getElementById('detailJamMasuk').textContent = (p.masuk && p.masuk.sudah) ? p.masuk.jam : '–';
     document.getElementById('detailJamPulang').textContent = (p.pulang && p.pulang.sudah) ? p.pulang.jam : '—';
     document.getElementById('detailDurasi').textContent = p.durasi || '–';
@@ -128,9 +134,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('radiusLokasiMasuk').textContent = radiusTeks;
     document.getElementById('radiusLokasiPulang').textContent = radiusTeks;
 
-    // ---- TITIK PATOKAN & RADIUS DIIZINKAN ----
-    // Koordinat mentah dapur TIDAK ditampilkan (sesuai instruksi) -- cuma
-    // radius diizinkan vs jarak aktual, dengan kesimpulan valid/tidaknya.
     const patokanWrap = document.getElementById('patokanRadiusInfo');
     if (p.lokasiSppg) {
       const radiusDiizinkan = p.lokasiSppg.radiusMeter;
@@ -173,43 +176,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
-    // ---- RINGKASAN KEHADIRAN (4 kategori) ----
-    document.getElementById('totalHadirPeriode').textContent = d.ringkasanKehadiran.totalHadir;
-    document.getElementById('totalTerlambatPeriode').textContent = d.ringkasanKehadiran.terlambat;
-    document.getElementById('totalIzinSakitPeriode').textContent = d.ringkasanKehadiran.izinSakit;
-    document.getElementById('totalTidakHadirPeriode').textContent = d.ringkasanKehadiran.tidakHadir;
-
-    // ---- INFORMASI PENTING ----
-    const infoWrap = document.getElementById('infoPentingList');
-    if (d.informasiPenting && d.informasiPenting.length) {
-      infoWrap.innerHTML = d.informasiPenting.map(i => `
-        <div class="info-card">
-          <h3 class="info-card-title">${escapeHtml(i.judul)}</h3>
-          <p class="info-card-body">${escapeHtml(i.isi)}</p>
-        </div>`).join('');
-    } else {
-      infoWrap.innerHTML = '<p class="empty-state">Belum ada informasi penting saat ini.</p>';
-    }
-
+    // P0 selesai — tampilkan Dashboard SEKARANG. Ringkasan Kehadiran &
+    // Informasi Penting (P1) masih menunjukkan placeholder "…"/"Memuat
+    // informasi..." sampai fetch P1 di bawah selesai — TIDAK menahan P0.
     main.style.display = 'block';
   } catch (err) {
     hideLoading();
-    // OPTIMASI: bedakan SESSION INVALID dari NETWORK ERROR -- sebelumnya
-    // keduanya ditangani SAMA (tombol "Coba Lagi" generik), padahal kalau
-    // sesinya memang sudah berakhir, "Coba Lagi" hanya akan mengulang
-    // request dengan token yang SAMA-SAMA tidak valid, gagal terus tanpa
-    // pernah mengarahkan relawan untuk login ulang.
     if (typeof apakahErrorSesiTidakValid === 'function' && apakahErrorSesiTidakValid(err.message)) {
       hapusSesiRelawan();
       window.location.href = 'login.html';
       return;
     }
     showError(err.message || 'Gagal memuat dashboard.');
-    // FASE 2: sebelumnya dashboardMain TETAP display:none kalau pemuatan
-    // gagal -- toast error hilang setelah beberapa detik dan pengguna
-    // ditinggalkan di halaman kosong tanpa penjelasan maupun cara mencoba
-    // lagi selain me-reload manual. Sekarang tampilkan status gagal +
-    // tombol Coba Lagi di dalam area konten itu sendiri.
     main.innerHTML = `
       <div class="empty-state" style="padding:40px 20px;text-align:center;">
         <p style="margin:0 0 12px;font-size:14px;color:#55606f;">Data belum dapat dimuat. Periksa koneksi internet Anda.</p>
@@ -218,5 +196,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     main.style.display = 'block';
     const btnCobaLagi = document.getElementById('btnCobaLagiDashboard');
     if (btnCobaLagi) btnCobaLagi.addEventListener('click', () => window.location.reload());
+    return; // P0 gagal -- jangan lanjut fetch P1, tidak ada gunanya tanpa P0
+  }
+
+  // ---- P1: Ringkasan Kehadiran + Informasi Penting (independen dari P0,
+  // TIDAK di-await sebelum P0 tampil -- lihat main.style.display di atas
+  // yang SUDAH jalan sebelum baris ini dieksekusi). Kegagalan P1 TIDAK
+  // menyembunyikan/merusak P0 yang sudah tampil (§3/§5 dokumen audit). ----
+  try {
+    const d1 = await apiGet('getDashboardRelawanP1', { token: sesi.token });
+
+    document.getElementById('totalHadirPeriode').textContent = d1.ringkasanKehadiran.totalHadir;
+    document.getElementById('totalTerlambatPeriode').textContent = d1.ringkasanKehadiran.terlambat;
+    document.getElementById('totalIzinSakitPeriode').textContent = d1.ringkasanKehadiran.izinSakit;
+    document.getElementById('totalTidakHadirPeriode').textContent = d1.ringkasanKehadiran.tidakHadir;
+
+    const infoWrap = document.getElementById('infoPentingList');
+    if (d1.informasiPenting && d1.informasiPenting.length) {
+      infoWrap.innerHTML = d1.informasiPenting.map(i => `
+        <div class="info-card">
+          <h3 class="info-card-title">${escapeHtml(i.judul)}</h3>
+          <p class="info-card-body">${escapeHtml(i.isi)}</p>
+        </div>`).join('');
+    } else {
+      infoWrap.innerHTML = '<p class="empty-state">Belum ada informasi penting saat ini.</p>';
+    }
+  } catch (err) {
+    // P1 gagal -- ganti placeholder "…" jadi status gagal yang JELAS
+    // (bukan diam menampilkan "…" selamanya, dan BUKAN dianggap 0/kosong).
+    ['totalHadirPeriode', 'totalTerlambatPeriode', 'totalIzinSakitPeriode', 'totalTidakHadirPeriode'].forEach(id => {
+      document.getElementById(id).textContent = '–';
+    });
+    document.getElementById('infoPentingList').innerHTML = '<p class="empty-state">Ringkasan &amp; Informasi belum dapat dimuat. <button type="button" id="btnCobaLagiP1" style="background:none;border:none;color:#3b7dd8;font-weight:700;cursor:pointer;padding:0;">Coba Lagi</button></p>';
+    const btnCobaLagiP1 = document.getElementById('btnCobaLagiP1');
+    if (btnCobaLagiP1) btnCobaLagiP1.addEventListener('click', () => window.location.reload());
   }
 });
